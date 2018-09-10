@@ -1,4 +1,3 @@
-
 module Lab1 where
 import Data.List
 import Data.Char
@@ -58,22 +57,23 @@ exercise3QuickCheck :: IO ()
 exercise3QuickCheck = quickCheck exercise3Test
 
 
--- 2. (5 Min.)
+-- 2. (5 Min.) ✓
 exercise4Test :: (NonNegative Int) -> Bool
 exercise4Test (NonNegative n) = n <= 20 --> length (subsequences [1..n]) == 2^n
 
 {--
+  DISCLAIMER: I know that I am missing the constraint that we should use
+  uniqueness of sets on Haskell lists. We did that though in our grouped solution.
+
   The test is somewhat difficult without the (-->) operator
   in `exercise4Test` owing to the fact that QuickCheck otherwise uses
   arbitrarily large integers to test which results in too high powers in `2^n`.
-
-
 --}
 exercise4QuickCheck :: IO ()
 exercise4QuickCheck = quickCheck exercise4Test
 
 
--- 3. (10 Min.)
+-- 3. (10 Min.) ✓
 fac = product . flip take [1..]
 
 exercise5Test :: (NonNegative Int) -> Bool
@@ -82,11 +82,12 @@ exercise5Test (NonNegative n) = n <= 10 --> length (permutations intList) == fac
                                   intList = [1..n]
 
 {--
+  DISCLAIMER: I know that I am missing the constraint that we should use
+  uniqueness of sets on Haskell lists. We did that though in our grouped solution.
+
   The test is somewhat difficult without the (-->) operator
   in `exercise5Test` owing to the fact that QuickCheck otherwise uses
   arbitrarily large integers to test which results in too high factorials.
-
-
 --}
 exercise5QuickCheck :: IO ()
 exercise5QuickCheck = quickCheck exercise5Test
@@ -103,12 +104,17 @@ reversalPrimesQuickCheck :: IO ()
 reversalPrimesQuickCheck = quickCheck reversalPrimesTest
 
 
--- 5. (15 Min.)
+-- 5. (15 Min.) ✓
 prime101Window :: Int -> [Integer]
 prime101Window n = drop n (take (101 + n) primes)
 
 prime101Sum :: [Integer]
 prime101Sum = [sum (prime101Window x) | x <- [0..], prime (sum (prime101Window x))]
+
+leastPrimeConsecutiveSum :: Integer
+leastPrimeConsecutiveSum = head prime101Sum
+
+-- I am still missing a possible test scenario
 
 
 -- 6. (15 Min.) ✓
@@ -169,21 +175,32 @@ isVisa n = iin == 4 && luhn n
            where
              iin = read . take 1 . show $ n :: Int
 
+-- Generates the check digit for a given card number with it still missing at the end
 generateLuhnCheckDigit :: Integer -> Int
 generateLuhnCheckDigit n = mod (nonCheckSum * 9) 10
                            where
                              nonCheckSum = sumString (alternateMap luhnDoubleFromChar (show n))
 
-luhnTest :: (NonNegative Integer) -> Bool
-luhnTest (NonNegative n) = length (show n) == 10 --> luhn concatCardNumber
-                           where
-                             concatCardNumber = read (show n ++ show (generateLuhnCheckDigit n)) :: Integer
+-- A custom generator that generates arbitrary credit card numbers with the check digit missing
+cardNumber :: Gen Integer
+cardNumber = choose (1000000000, 9999999999)
 
+-- Calculates the check digit for a given card number and then checks if that passes the Luhn algorithm
+luhnTest :: Integer -> Bool
+luhnTest n = luhn concatCardNumber
+             where
+               concatCardNumber = read (show n ++ show (generateLuhnCheckDigit n)) :: Integer
+
+-- Tests the custom generator with the written test
 luhnQuickCheck :: IO ()
-luhnQuickCheck = verboseCheck luhnTest
+luhnQuickCheck = quickCheck (forAll cardNumber luhnTest)
 
 
 -- 8. (60 Min.)
+
+-- DISCLAIMER:
+-- I unfortunately did not finish this, we did though in the grouped solution
+
 xor' :: Bool -> Bool -> Bool
 xor' True False = True
 xor' False True = True
