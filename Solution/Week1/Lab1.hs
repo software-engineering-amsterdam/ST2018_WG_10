@@ -1,4 +1,3 @@
-
 module Lab1 where
 import Data.List
 import Test.QuickCheck
@@ -8,9 +7,9 @@ prime n = n > 1 && all (\ x -> rem n x /= 0) xs
   where xs = takeWhile (\ y -> y^2 <= n) primes
 
 primes :: [Integer]
-primes = 2 : filter prime [3..] 
+primes = 2 : filter prime [3..]
 
-infix 1 --> 
+infix 1 -->
 
 (-->) :: Bool -> Bool -> Bool
 p --> q = (not p) || q
@@ -21,12 +20,26 @@ forall = flip all
 reversal :: Integer -> Integer
 reversal = read . reverse . show
 
-data Boy = Matthew | Peter | Jack | Arnold | Carl 
+data Boy = Matthew | Peter | Jack | Arnold | Carl
            deriving (Eq,Show)
 
 boys = [Matthew, Peter, Jack, Arnold, Carl]
 
 
+-- Exercises --
 
+-- 1 --
 
+-- 2 --
 
+-- 3 --
+
+-- 4 --
+
+-- 5 --
+
+-- 6 --
+
+-- 7 --
+
+-- 8 --
