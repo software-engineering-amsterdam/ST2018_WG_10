@@ -129,6 +129,8 @@ leastPrimeConsecutiveSum = head . filter prime . map sum101PrimesFrom $ [1..] wh
 --  6. (~ 10 minutes)
 -- ====
 
+-- Conjecture takes the first n primes and returns whether these primes 
+-- fulfill the conjecture
 conjecture n = prime . (+ 1) . product . take n $ primes
 
 leastRefutal = take (head refutals) primes where
@@ -137,17 +139,15 @@ leastRefutal = take (head refutals) primes where
 --  7. (~30 minutes)
 -- ====
 
-infixl 1 &
-(&) :: a -> (a -> b) -> b
-(&) a f = f a
-
 luhn :: Integer -> Bool
 luhn n = (\m -> (m `mod` 10) == 0) $ sum $ map toSingleDig $ double2nds $ digits $ n
     where
         digits :: Integer -> [Integer]
         digits n = [read [d] | d<-reverse . show $ n]
+
         double2nds :: [Integer] -> [Integer]
         double2nds digits = [a * b|(a, b)<-zip (cycle [1,2]) digits]
+
         toSingleDig :: Integer -> Integer
         toSingleDig n | n > 9     = n - 9
                       | otherwise = n
