@@ -4,7 +4,7 @@ The final solutions for the lab exercises can be found in the Solution/ subdirec
 
 ## Group members:
 
-Jakob Löhnertz
-Nicolaos Niopas
-Lucas Vanparijs
-Christian Stuart
+Jakob Löhnertz  
+Nicolaos Niopas  
+Lucas Vanparijs  
+Christian Stuart  
