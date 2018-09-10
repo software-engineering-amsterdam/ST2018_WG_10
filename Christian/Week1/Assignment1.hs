@@ -4,8 +4,8 @@ import Debug.Trace
 import Test.QuickCheck
 import Lab1
 
---  1.
--- ===
+--  1. (~20 minutes)
+-- =======
 
 sqsum :: Int -> Int
 sqsum n = n * (n + 1) * (2 * n + 1) `quot` 6
@@ -24,8 +24,8 @@ testcubesum = quickCheck test where
     test (NonNegative n) = sum [m^3 | m <- [1..n]] == cubesum n
 
 
---  2. 
--- ===
+--  2. (~30 minutes)
+-- ======= 
 
 -- This test will break on a list of length N if N becomes too large, since the number of 
 -- subsequences grows exponentially in N. A limit is set on N = 16, so the number of subsequences is
@@ -69,7 +69,7 @@ testSequencesLength = quickCheck test
         conjecture :: [Integer] -> Bool
         conjecture xs = (length . sortunique . map sortunique . subsequences) xs == 2 ^ length xs
     
---  3. 
+--  3. (~10 minutes)
 -- ====
 
 -- Again, this test breaks for a large N, now even faster than the previous exercise, so a
@@ -94,8 +94,8 @@ testPermutationsLength = quickCheck test
 
 
 
---  4. 
--- ====
+--  4. (~20 minutes)
+-- ============
 
 reversePrimes :: [Integer]
 reversePrimes = [n | n <- takeWhile (<10000) primes, prime . reversal $ n]
@@ -113,7 +113,7 @@ testReversePrimes = quickCheck test where
 
 
 
---  5. 
+--  5. (~30 minutes)
 -- ====
 
 leastPrimeConsecutiveSum :: Integer
@@ -126,7 +126,7 @@ leastPrimeConsecutiveSum = head . filter prime . map sum101PrimesFrom $ [1..] wh
 -- equivalent to the function itself, so it might not be very useful.  
 
 
---  6. 
+--  6. (~ 10 minutes)
 -- ====
 
 conjecture n = prime . (+ 1) . product . take n $ primes
@@ -134,7 +134,7 @@ conjecture n = prime . (+ 1) . product . take n $ primes
 leastRefutal = take (head refutals) primes where
     refutals = [n | n <- [1..], not . conjecture $ n]
 
---  7. 
+--  7. (~30 minutes)
 -- ====
 
 infixl 1 &
@@ -152,7 +152,7 @@ luhn n = (\m -> (m `mod` 10) == 0) $ sum $ map toSingleDig $ double2nds $ digits
         toSingleDig n | n > 9     = n - 9
                       | otherwise = n
 
---  8. 
+--  8. (~1 hr)
 -- ====
 
 -- xor helper function
