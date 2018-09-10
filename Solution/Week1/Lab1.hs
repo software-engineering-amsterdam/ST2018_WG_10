@@ -1,4 +1,5 @@
 module Lab1 where
+import Data.Char
 import Data.List
 import Test.QuickCheck
 
@@ -151,8 +152,154 @@ leastPrimeConsecutiveSum = head prime101Sum
 
 -- 6 --
 
+consecPrimesFrom2 :: Int -> [Integer]
+consecPrimesFrom2 n = take n primes
+
+consecPrimeConjecture :: Int -> Bool
+consecPrimeConjecture n = prime (product (consecPrimesFrom2 n) + 1)
+
+generateConsecPrimeCounterExamples :: [Int]
+generateConsecPrimeCounterExamples = [x | x <- [1..], not (consecPrimeConjecture x)]
+
+smallestConsecPrimeCounterExample = head generateConsecPrimeCounterExamples
+
 
 -- 7 --
 
+luhnDouble :: Int -> Int
+luhnDouble n = if doubled > 9 then doubled - 9 else doubled
+               where
+                 doubled = 2 * n
+
+luhnDoubleFromChar :: Char -> Char
+luhnDoubleFromChar x = intToDigit . luhnDouble . digitToInt $ x
+
+alternateMap :: (a -> a) -> [a] -> [a]
+alternateMap _ [] = []
+alternateMap _ [x] = []
+alternateMap f (x:xs:xss) = x : (f xs) : alternateMap f xss
+
+sumString :: String -> Int
+sumString x = sum [digitToInt n | n <- x]
+
+retrieveLastDigitOfNumber :: Integer -> Int
+retrieveLastDigitOfNumber n = digitToInt . last . show $ n
+
+luhn :: Integer -> Bool
+luhn n = mod (nonCheckSum + checkDigit) 10 == 0
+         where
+           nonCheckSum = sumString (alternateMap luhnDoubleFromChar (show n))
+           checkDigit  = retrieveLastDigitOfNumber n
+
+numberInRange :: Int -> (Int, Int) -> Bool
+numberInRange n (k,l) = elem n [k..l]
+
+isAmericanExpress :: Integer -> Bool
+isAmericanExpress n = (iin == 34 || iin == 37) && luhn n
+                      where
+                        iin = read . take 2 . show $ n :: Int
+
+isMaster :: Integer -> Bool
+isMaster n = (numberInRange iin1 (2221,2720) || numberInRange iin2 (51,55)) && luhn n
+             where
+               iin1 = read . take 4 . show $ n :: Int
+               iin2 = read . take 2 . show $ n :: Int
+
+isVisa :: Integer -> Bool
+isVisa n = iin == 4 && luhn n
+           where
+             iin = read . take 1 . show $ n :: Int
+
+-- Generates the check digit for a given card number with it still missing at the end
+generateLuhnCheckDigit :: Integer -> Int
+generateLuhnCheckDigit n = mod (nonCheckSum * 9) 10
+                           where
+                             nonCheckSum = sumString (alternateMap luhnDoubleFromChar (show n))
+
+-- A custom generator that generates arbitrary credit card numbers with the check digit missing
+cardNumber :: Gen Integer
+cardNumber = choose (1000000000, 9999999999)
+
+-- Calculates the check digit for a given card number and then checks if that passes the Luhn algorithm
+luhnTest :: Integer -> Bool
+luhnTest n = luhn concatCardNumber
+             where
+               concatCardNumber = read (show n ++ show (generateLuhnCheckDigit n)) :: Integer
+
+-- Tests the custom generator with the written test
+luhnQuickCheck :: IO ()
+luhnQuickCheck = quickCheck (forAll cardNumber luhnTest)
+
 
 -- 8 --
+
+-- xor helper function
+xor :: Bool -> Bool -> Bool
+xor = (/=)
+
+-- helper function, so we can write 'x `exonerates` y'
+exonerates :: Boy -> Boy -> Bool
+exonerates b = not . accuses b
+
+
+-- There are multiple ways of interpreting Jack's statement.
+-- Interpretation A:
+--   if either Matthew or Peter accuses x,
+--   x is innocent. Otherwise, x is guilty.
+-- Interpretation B:
+--   if both Matthew and Peter accuse x,
+--   x is innocent. Otherwise, x is guilty.
+-- B failed to provide a good result, so the assumption was made
+-- that A is correct.
+
+accuses :: Boy -> Boy -> Bool
+accuses Matthew Carl = False
+accuses Matthew Matthew = False
+accuses Matthew _ = True
+
+accuses Peter Matthew = True
+accuses Peter Jack = True
+accuses Peter _ = False
+
+accuses Jack boy = Matthew `exonerates` boy && Peter `exonerates` boy
+
+accuses Arnold boy = (Matthew `accuses` boy) `xor` (Peter `accuses` boy)
+
+accuses Carl boy = Arnold `exonerates` boy
+
+accusers :: Boy -> [Boy]
+accusers boy = [acc | acc<-boys, acc `accuses` boy]
+
+data Solution a = None | Solution a | TooMany
+
+solveguilty :: [([Boy], [Boy])]
+solveguilty = filter (\(hs, gs) -> length gs == 1) [(hs, accusedby hs) | hs<-subgroups 3 boys]
+    where
+        subgroups :: Int -> [a] -> [[a]]
+        subgroups n = filter ((== n) . length) . subsequences
+        accusedby :: [Boy] -> [Boy]
+        accusedby hs = filter (\b -> all (`accuses` b) hs) boys
+
+honest :: Solution [Boy]
+honest = toSolution solveguilty where
+    toSolution [] = None
+    toSolution [(h, _)] = Solution h
+    toSolution _ = TooMany
+
+guilty :: Solution [Boy]
+guilty = toSolution solveguilty where
+    toSolution [] = None
+    toSolution [(_, g)] = Solution g
+    toSolution _ = TooMany
+
+puthonest :: IO()
+puthonest = putsolution honest where
+    putsolution None  = putStrLn "No solutions found"
+    putsolution TooMany = putStrLn "No unique solution found"
+    putsolution (Solution s) = putStrLn $ "  Honest:" ++ show s
+
+putguilty :: IO()
+putguilty = putsolution guilty where
+    putsolution None  = putStrLn "No solutions found"
+    putsolution TooMany = putStrLn "No unique solution found"
+    putsolution (Solution s) = putStrLn $ "  Guilty:" ++ show s
