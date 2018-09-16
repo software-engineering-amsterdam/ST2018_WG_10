@@ -1,9 +1,16 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
+
 module Lab2 where
 
-import Data.List
-import Data.Char
-import System.Random
-import Test.QuickCheck
+import           Data.Aeson
+import qualified Data.ByteString.Lazy as B
+import           Data.Char
+import           Data.List
+import           Data.Maybe
+import           GHC.Generics
+import           System.Random
+import           Test.QuickCheck
 
 infix 1 -->
 
@@ -19,6 +26,10 @@ probs n = do
 
 data Shape = NoTriangle | Equilateral
            | Isosceles  | Rectangular | Other deriving (Eq,Show)
+
+lowercaseAlphabet = ['a'..'z']
+
+uppercaseAlphabet = ['A'..'Z']
 
 
 -- Exercises
@@ -56,6 +67,88 @@ Here goes the test report
 
 -- 5)
 
+{-
+  ROT13 is a simple cipher with no real cryptographic security.
+  The idea is that every letter of a given string are shifted
+  by 13 letters based on the latin alphabet.
+  This makes the output string unreadable for humans.
+  Owing to the fact, that the latin alphabet bears 26 letters,
+  applying ROT13 to a previously ciphered string with the same
+  algorithm gives back the original string since on every run,
+  each letter gets essentially inverted on the "scale" of the alphabet.
+-}
+
+-- Only works on lowercase strings
+rot13 :: String -> String
+rot13 [x]    = [lowercaseAlphabet !! (mod (ord x - ord 'a' + 13) 26)]
+rot13 (x:xs) = rot13 [x] ++ rot13 xs
+
+
 -- 6)
 
--- 7)
+data IbanCountry =
+  IbanCountry {
+    country  :: String
+    , length :: String
+    , code   :: String
+    , format :: String
+  } deriving (Show, Generic, ToJSON, FromJSON)
+
+ibanJson :: IO B.ByteString
+ibanJson = B.readFile "iban.json"
+
+emptyIbanCountry :: IbanCountry
+emptyIbanCountry = IbanCountry "" "" "" ""
+
+ibanCountries :: IO ([IbanCountry])
+ibanCountries = do
+  json <- ibanJson
+  case decode json :: Maybe [IbanCountry] of
+    Nothing     -> return [emptyIbanCountry]
+    Just result -> return result
+
+convertIbanCharToDigit :: Char -> String
+convertIbanCharToDigit x = show ((fromMaybe (0) (elemIndex x uppercaseAlphabet)) + 10)
+
+rearrangeIban :: String -> String
+rearrangeIban (cc1:cc2:cd1:cd2:xs) = xs ++ [cc1] ++ [cc2] ++ [cd1] ++ [cd2]
+
+convertRearrangedIbanToInteger :: String -> Integer
+convertRearrangedIbanToInteger xs = read convertedIban :: Integer
+                                    where
+                                      convertedIban = concat [if not(isDigit x) then convertIbanCharToDigit x else [x] | x <- xs]
+
+validateIbanCheckDigit :: String -> Bool
+validateIbanCheckDigit xs = (mod ibanAsInt 97) == 1
+                            where
+                              rearrangedIban = rearrangeIban xs
+                              ibanAsInt      = convertRearrangedIbanToInteger rearrangedIban
+
+extractCountryCodes :: [IbanCountry] -> [String]
+extractCountryCodes [x]    = [Lab2.code x]
+extractCountryCodes (x:xs) = [Lab2.code x] ++ extractCountryCodes xs
+
+countryCodes :: IO [String]
+countryCodes = do
+  countries <- ibanCountries
+  return (extractCountryCodes countries)
+
+findCountryLength :: [IbanCountry] -> String -> Int
+findCountryLength [] _      = (-1)
+findCountryLength (x:xs) cc = if Lab2.code x == cc then read (Lab2.length x) :: Int else findCountryLength xs cc
+
+countryLength :: String -> IO Int
+countryLength countryCode = do
+  countries <- ibanCountries
+  return (findCountryLength countries countryCode)
+
+iban :: String -> IO (Bool)
+iban (cc1:cc2:cd1:cd2:xs) = do
+  let iban = (cc1:cc2:cd1:cd2:xs)
+  let countryCode = [cc1] ++ [cc2]
+  validCountryCodes <- countryCodes
+  let validCountry = elem countryCode validCountryCodes
+  expectedLength <- countryLength countryCode
+  let validLength = expectedLength == Data.List.length iban
+  let validCheckDigit = validateIbanCheckDigit iban
+  return (validCountry && validLength && validCheckDigit)
