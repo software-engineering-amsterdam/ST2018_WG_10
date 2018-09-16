@@ -61,7 +61,7 @@ quartileLenghts floats = [fromIntLength first, fromIntLength second, fromIntLeng
                            third  = takeWhile (<0.75) (dropWhile (<0.50) floats)
                            fourth = takeWhile (<1.00) (dropWhile (<0.75) floats)
 
--- probsTest :: Int -> IO Float
+probsTest :: Int -> IO Float
 probsTest n = do
   floats <- probs n
   let sortedFloats = sort floats
