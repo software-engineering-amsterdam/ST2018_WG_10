@@ -20,12 +20,12 @@ p --> q = (not p) || q
 probs :: Int -> IO [Float]
 probs 0 = return []
 probs n = do
-             p <- getStdRandom random
-             ps <- probs (n-1)
-             return (p:ps)
+  p <- getStdRandom random
+  ps <- probs (n-1)
+  return (p:ps)
 
 data Shape = NoTriangle | Equilateral
-           | Isosceles  | Rectangular | Other deriving (Eq,Show)
+           | Isosceles  | Rectangular | Other deriving (Eq, Show)
 
 lowercaseAlphabet = ['a'..'z']
 
@@ -34,7 +34,7 @@ uppercaseAlphabet = ['A'..'Z']
 
 -- Exercises
 
--- 1)
+
 
 -- 2) (20 Min.)
 
@@ -58,7 +58,7 @@ triangle a b c | triangleImpossible (a,b,c)  = NoTriangle
                | otherwise                   = Other
 
 {-
-Here goes the test report
+  Here goes the test report.
 -}
 
 -- 3)
@@ -66,6 +66,8 @@ Here goes the test report
 -- 4)
 
 -- 5)
+
+-- 6)
 
 {-
   ROT13 is a simple cipher with no real cryptographic security.
@@ -83,15 +85,19 @@ rot13 :: String -> String
 rot13 [x]    = [lowercaseAlphabet !! (mod (ord x - ord 'a' + 13) 26)]
 rot13 (x:xs) = rot13 [x] ++ rot13 xs
 
+{-
+  Here goes the test report.
+-}
 
--- 6)
+
+-- 7) (60 Min.)
 
 data IbanCountry =
   IbanCountry {
-    country  :: String
-    , length :: String
-    , code   :: String
-    , format :: String
+    country      :: String
+    , ibanLength :: String
+    , code       :: String
+    , format     :: String
   } deriving (Show, Generic, ToJSON, FromJSON)
 
 ibanJson :: IO B.ByteString
@@ -135,7 +141,7 @@ countryCodes = do
 
 findCountryLength :: [IbanCountry] -> String -> Int
 findCountryLength [] _      = (-1)
-findCountryLength (x:xs) cc = if Lab2.code x == cc then read (Lab2.length x) :: Int else findCountryLength xs cc
+findCountryLength (x:xs) cc = if Lab2.code x == cc then read (Lab2.ibanLength x) :: Int else findCountryLength xs cc
 
 countryLength :: String -> IO Int
 countryLength countryCode = do
@@ -149,6 +155,10 @@ iban (cc1:cc2:cd1:cd2:xs) = do
   validCountryCodes <- countryCodes
   let validCountry = elem countryCode validCountryCodes
   expectedLength <- countryLength countryCode
-  let validLength = expectedLength == Data.List.length iban
+  let validLength = expectedLength == length iban
   let validCheckDigit = validateIbanCheckDigit iban
   return (validCountry && validLength && validCheckDigit)
+
+{-
+  Here goes the test report.
+-}
