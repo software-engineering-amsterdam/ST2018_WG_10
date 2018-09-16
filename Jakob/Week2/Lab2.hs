@@ -34,6 +34,60 @@ uppercaseAlphabet = ['A'..'Z']
 
 -- Exercises
 
+-- 1) (60 Min.)
+
+mean :: [Float] -> Float
+mean floats = (sum floats) / (fromIntegral (length floats))
+
+variance :: [Float] -> Float
+variance floats = mean squaredDiffs
+                  where
+                    average = mean floats
+                    diffs = map ((-)average) floats
+                    squaredDiffs = map (^2) diffs
+
+standardDev :: [Float] -> Float
+standardDev [] = 0
+standardDev xs = sqrt . variance $ xs
+
+fromIntLength :: (Num c, Foldable t) => t a -> c
+fromIntLength = fromIntegral . length
+
+quartileLenghts :: (Ord a, Fractional a) => [a] -> [Float]
+quartileLenghts floats = [fromIntLength first, fromIntLength second, fromIntLength third, fromIntLength fourth]
+                         where
+                           first  = takeWhile (<0.25) (dropWhile (<0.00) floats)
+                           second = takeWhile (<0.50) (dropWhile (<0.25) floats)
+                           third  = takeWhile (<0.75) (dropWhile (<0.50) floats)
+                           fourth = takeWhile (<1.00) (dropWhile (<0.75) floats)
+
+-- probsTest :: Int -> IO Float
+probsTest n = do
+  floats <- probs n
+  let sortedFloats = sort floats
+  let quartiles = quartileLenghts sortedFloats
+  let stdDev = standardDev quartiles
+  return stdDev
+
+probsCheck :: IO ()
+probsCheck = do
+  stdDev <- probsTest 10000
+  if stdDev <= 50.0 then
+    putStrLn $ "The standard deviation is acceptable (" ++ show stdDev ++ ")."
+  else
+    putStrLn $ "The standard deviation is too high (" ++ show stdDev ++ ")."
+
+{-
+  The `probs :: Int -> IO [Float]` function by Red Curry seems to yield very
+  differing results on every run. The custom function `probsTest :: IO Float`
+  retrieves n floats from `probs` and calculates the standard deviation of the
+  quantiles of (0..1).
+  The custom function `probsCheck :: IO ()` runs `probsTest` with 10000 as its
+  input. It was determined, that a standard deviation under 50 is acceptable
+  while one over 50 is too high.
+  Consequently, it can be observed that the result differs vastly on each run.
+  This leads to believe that the function `probs` is not properly working.
+-}
 
 
 -- 2) (20 Min.)
