@@ -119,7 +119,16 @@ triangle a b c | triangleImpossible (a,b,c)  = NoTriangle
 
 -- 4)
 
--- 5)
+-- 5) (20 Min.)
+
+isDerangement :: (Eq a, Integral a) => [a] -> [a] -> Bool
+isDerangement [] [] = True
+isDerangement (x:xs) (y:ys) = x /= y && isDerangement xs ys
+
+deran :: (Eq a, Integral a) => [a] -> [[a]]
+deran [] = []
+deran xs = filter (isDerangement xs) (permutations xs)
+
 
 -- 6)
 
