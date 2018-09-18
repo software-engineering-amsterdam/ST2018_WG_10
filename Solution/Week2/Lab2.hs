@@ -5,9 +5,9 @@ import           Data.Char
 import           Data.List
 import           Data.Maybe
 import           Debug.Trace
+import           Iban
 import           System.Random
 import           Test.QuickCheck
-import           Iban
 
 
 infix 1 -->
@@ -408,7 +408,7 @@ setCheckDigit (Iban (coa:cob:_:_:bban)) = Iban $ [coa, cob] ++ showCheckDigit ch
             | otherwise = show c
         checkDigit = (98 -) $ (`mod` 97) $ read' $ concat $ map toDigits (bban ++ [coa, cob, '0', '0'])
         read' :: [Char] -> Integer
-        read' cs =  read cs
+        read' cs = read cs
 
         toDigits c
             | isDigit c = [c]
@@ -451,6 +451,7 @@ instance Arbitrary InvalidIban where
 prop_validIban (ValidIban (Iban cs)) = iban cs
 prop_invalidIban (InvalidIban (Iban cs)) = not $ iban cs
 
+
 {-
   There are two ways of varifying that the `iban` function is working.
   One can test actual, valid IBANs or generate invalid ones on purpose.
@@ -460,4 +461,6 @@ prop_invalidIban (InvalidIban (Iban cs)) = not $ iban cs
   country code and an IBAN that is 37 digits in length – no country's IBANs
   are that long. The resulting IBAN should therefore be wrong in any case
   and `iban` should return `False`.
+
+
 -}
