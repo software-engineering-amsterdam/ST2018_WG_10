@@ -1,12 +1,12 @@
 module Lab2 where
 
-import Data.List
-import Data.Char
-import Data.Maybe
-import System.Random
-import Test.QuickCheck
-import Debug.Trace
-import Control.Monad
+import           Control.Monad
+import           Data.Char
+import           Data.List
+import           Data.Maybe
+import           Debug.Trace
+import           System.Random
+import           Test.QuickCheck
 
 infix 1 -->
 
@@ -122,8 +122,8 @@ prop3 = PropDef "even x && x > 3 || even x" (\x -> even x && x > 3 || even x)
 sortedProp = sort [prop0, prop1, prop2, prop3]
 
 isSorted :: ((Integer -> Bool) -> (Integer -> Bool) -> Bool) -> [(Integer -> Bool)] -> Bool
-isSorted _ [] = True
-isSorted _ [_] = True
+isSorted _ []       = True
+isSorted _ [_]      = True
 isSorted c (x:y:xs) = c y x && isSorted c (y:xs)
 
 -- test if list of PropDef items is ordered by stronger
@@ -225,5 +225,52 @@ derangementTest :: Int -> Property
 derangementTest n = (n >= 2 && n <= 7) ==> length (deran [1..n]) == subfact n
 
 derangementQuickCheck = quickCheck derangementTest
+
+-- [JAKOB Insert text]
+
+
+-- Exercise 6
+
+-- For convenience, 'ord' and 'chr' are omitted in the specification.
+--
+-- Specification for helper function rot13char:
+--   rot13char :: Char -> Char
+--   { λc -> isLower    c } λc -> rot13char c  { λc' -> c' == 'a' + ((c - 'a' + 13) `mod` 26) }
+--   { λc -> isUpper    c } λc -> rot13char c  { λc' -> c' == 'A' + ((c - 'A' + 13) `mod` 26) }
+--   { λc -> isNonAlpha c } λc -> rot13char c  { λc' -> c' == c) }
+
+rot13char :: Char -> Char
+rot13char c
+    | isLower c = chr $ shift13 (ord 'a') (ord c)
+    | isUpper c = chr $ shift13 (ord 'A') (ord c)
+    | otherwise = c
+    where
+        shift13 zero c = zero + ((c - zero + 13) `mod` 26)
+
+
+-- Specification of the rot13 function:
+-- { λcs     → cs = [] } λcs     → rot13 cs   { λcs'      → cs' == [] }
+-- { λ(c:cs) → ⊤       } λ(c:cs) → rot13 c:cs { λ(c':cs') → c' = rot13char c ∧ cs' = rot13 cs }
+
+rot13 :: String -> String
+rot13 []     = []
+rot13 (c:cs) = (rot13char c:rot13 cs)
+
+
+prop_rot13charLower c    = isLower c ==> ((\c' -> ord c' == (ord 'a') + (((ord c) - (ord 'a') + 13) `mod` 26)) $ rot13char c)
+prop_rot13charUpper c    = isUpper c ==> ((\c' -> ord c' == (ord 'A') + (((ord c) - (ord 'A') + 13) `mod` 26)) $ rot13char c)
+prop_rot13charNonAlpha c = (not.isAlpha) c ==> (\c' -> c' == c) $ rot13char c
+
+prop_rot13 [] = rot13 "" == ""
+prop_rot13 (c:cs) = (\(c':cs') -> c' == rot13char c && cs' == rot13 cs) $ rot13 (c:cs)
+
+checkRot13 = do
+    quickCheck prop_rot13charLower
+    quickCheck prop_rot13charUpper
+    quickCheck prop_rot13charNonAlpha
+    quickCheck prop_rot13
+
+
+-- Exercise 7
 
 -- [JAKOB Insert text]
