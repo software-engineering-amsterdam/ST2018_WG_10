@@ -7,6 +7,8 @@ import           Data.Maybe
 import           Debug.Trace
 import           System.Random
 import           Test.QuickCheck
+import           Iban
+
 
 infix 1 -->
 
@@ -73,6 +75,9 @@ probsCheck = uniformCheck $ probs 10000
 
 -- Exercise 2
 
+data Shape = NoTriangle | Equilateral
+           | Isosceles  | Rectangular | Other deriving (Eq, Show)
+
 triangleTest :: Integer -> Integer -> Integer -> Shape
 triangleTest a b c = do
                         let s = (fromIntegral(a + b + c))/2
@@ -90,6 +95,7 @@ triangleTest a b c = do
 -- Used paper "ANALYZING THE TRIANGLE PROBLEM" to get the special cases for this problem. I tested the function with help of these special cases.
 -- The paper is written by Collard & Company
 
+-- The special cases of degenerate triangles are classified as NoTriangle, e.g. triangleTest 1 2 3 == NoTriangle
 
 -- Excercise 3
 
@@ -273,4 +279,160 @@ checkRot13 = do
 
 -- Exercise 7
 
--- [JAKOB Insert text]
+-- 7) (180 Min.)
+
+-- Only works with `Data.Aeson` imported
+-- data IbanCountry =
+--   IbanCountry {
+--     country      :: String
+--     , ibanLength :: String
+--     , code       :: String
+--     , format     :: String
+--   } deriving (Show, Generic, ToJSON, FromJSON)
+
+
+lowercaseAlphabet = ['a'..'z']
+
+uppercaseAlphabet = ['A'..'Z']
+
+
+emptyIbanCountry :: IbanCountry
+emptyIbanCountry = IbanCountry "" "" "" ""
+
+convertIbanCharToDigit :: Char -> String
+convertIbanCharToDigit x = show ((fromMaybe (0) (elemIndex x uppercaseAlphabet)) + 10)
+
+rearrangeIban :: String -> String
+rearrangeIban (cc1:cc2:cd1:cd2:xs) = xs ++ [cc1] ++ [cc2] ++ [cd1] ++ [cd2]
+
+convertRearrangedIbanToInteger :: String -> Integer
+convertRearrangedIbanToInteger xs = read convertedIban :: Integer
+                                    where
+                                      convertedIban = concat [if not(isDigit x) then convertIbanCharToDigit x else [x] | x <- xs]
+
+validateIbanCheckDigit :: String -> Bool
+validateIbanCheckDigit xs = (mod ibanAsInt 97) == 1
+                            where
+                              rearrangedIban = rearrangeIban xs
+                              ibanAsInt      = convertRearrangedIbanToInteger rearrangedIban
+
+extractCountryCodes :: [IbanCountry] -> [String]
+extractCountryCodes [x]    = [code x]
+extractCountryCodes (x:xs) = [code x] ++ extractCountryCodes xs
+
+countryCodes :: [String]
+countryCodes = extractCountryCodes ibanCountries
+
+findCountryLength :: [IbanCountry] -> String -> Maybe Int
+findCountryLength [] _      = Nothing
+findCountryLength (x:xs) cc = if code x == cc then Just $ read $ ibanLength x else findCountryLength xs cc
+
+countryLength :: String -> Maybe Int
+countryLength countryCode = findCountryLength ibanCountries countryCode
+
+iban :: String -> Bool
+iban (cc1:cc2:cd1:cd2:xs) = fromMaybe False $ do
+  let iban = (cc1:cc2:cd1:cd2:xs)
+  let countryCode = [cc1] ++ [cc2]
+  validCountryCodes <- Just countryCodes
+  let validCountry = elem countryCode validCountryCodes
+  expectedLength <- countryLength countryCode
+  let validLength = expectedLength == length iban
+  let validCheckDigit = validateIbanCheckDigit iban
+  return (validCountry && validLength && validCheckDigit)
+
+incorrectCountryCode :: Gen [Char]
+incorrectCountryCode = do
+  randomPos1 <- choose (0, ((length uppercaseAlphabet) - 1))
+  let firstLetter = uppercaseAlphabet !! randomPos1
+  randomPos2 <- choose (0, ((length uppercaseAlphabet) - 1))
+  let secondLetter = uppercaseAlphabet !! randomPos2
+  let countryCode = firstLetter:secondLetter:[]
+  validCountryCodes <- pure countryCodes
+  if not(elem countryCode validCountryCodes) then
+    return countryCode
+  else
+    incorrectCountryCode
+
+smallestNumberForAmountOfDigits :: Int -> Integer
+smallestNumberForAmountOfDigits n = 10^(n - 1) -- eg 100
+
+largestNumberForAmountOfDigits :: Int -> Integer
+largestNumberForAmountOfDigits n = 10^n - 1 -- eg 999
+
+incorrectIbanLength :: Gen Integer
+incorrectIbanLength = do
+  randomTooLongIban <- choose (smallestNumberForAmountOfDigits 35, largestNumberForAmountOfDigits 35)
+  return randomTooLongIban
+
+randomDigits :: Int -> Gen [Char]
+randomDigits n = do
+    digits <- choose (smallestNumberForAmountOfDigits n - 4, largestNumberForAmountOfDigits n)
+    return $ show digits
+
+randomBBAN :: Int -> Gen [Char]
+randomBBAN n = do
+    chars <- sequence $ map (chr <$>) (replicate 4 $ choose (ord 'A', ord 'Z'))
+    digits <- randomDigits (n - 4)
+    return $ chars ++ digits
+
+newtype Iban = Iban [Char] deriving (Show, Eq)
+
+generateInvalidIban :: Gen Iban
+generateInvalidIban = do
+  countryCode <- incorrectCountryCode
+  randomIbanDigits <- incorrectIbanLength
+  let invalidIban = countryCode ++ (show randomIbanDigits)
+  return $ Iban invalidIban
+
+-- Sets the correct check digits for the IBAN
+setCheckDigit :: Iban -> Iban
+setCheckDigit (Iban (coa:cob:_:_:bban)) = Iban $ [coa, cob] ++ showCheckDigit checkDigit ++ bban
+    where
+        showCheckDigit c
+            | c < 10 = '0':show c
+            | otherwise = show c
+        checkDigit = (98 -) $ (`mod` 97) $ read' $ concat $ map toDigits (bban ++ [coa, cob, '0', '0'])
+        read' :: [Char] -> Integer
+        read' cs =  read cs
+
+        toDigits c
+            | isDigit c = [c]
+            | isAlpha c = show $ (ord $ toUpper c) - (ord 'A') + 10
+            | otherwise = error "Unexpected digit: " ++ [c]
+
+generateValidIban :: Gen Iban
+generateValidIban = do
+    countryCode <- elements countryCodes
+    countryLength <- pure $ fromJust $ countryLength countryCode
+    digits <- randomBBAN (countryLength - 4)
+    iban <- pure $ Iban $ countryCode ++ "00" ++ digits
+    iban <- pure $ setCheckDigit iban
+    return iban
+
+
+-- Takes a valid iban generator and introduces transcription errors such as:
+--    xyz -> xzy
+--    aabbcc -> aabcc
+generateTranscriptionErr :: Gen Iban -> Gen Iban
+generateTranscriptionErr gen = do
+    (Iban iban) <- gen
+    n <- choose (0, length iban - 2)
+    let part1 = take n iban
+    let (x:y:part2) = drop n iban
+    -- if y == x then there is no transposition error, instead
+    -- make it a shift error
+    let y' = if x == y then [] else [y]
+    return $ Iban (part1 ++ y' ++ (x:part2))
+
+newtype ValidIban = ValidIban Iban deriving (Show, Eq)
+newtype InvalidIban = InvalidIban Iban deriving (Show, Eq)
+
+instance Arbitrary ValidIban where
+    arbitrary = fmap ValidIban generateValidIban
+
+instance Arbitrary InvalidIban where
+    arbitrary = fmap InvalidIban $ oneof [generateInvalidIban, generateTranscriptionErr generateValidIban]
+
+prop_validIban (ValidIban (Iban cs)) = iban cs
+prop_invalidIban (InvalidIban (Iban cs)) = not $ iban cs
