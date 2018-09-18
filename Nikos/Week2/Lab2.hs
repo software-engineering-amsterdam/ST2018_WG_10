@@ -56,3 +56,83 @@ testProbs n = fmap countProbs (probs n)
 --
 -- As we can see, roughly the 25% of the floats belong to each of 
 -- the 4 categories, proving that the random function works as expected
+
+-- Excercise 2 --
+
+data Shape = NoTriangle | Equilateral 
+            | Isosceles  | Rectangular | Other deriving (Eq,Show)
+
+isTriangle :: Integer -> Integer -> Integer -> Bool
+isTriangle n m l = if (n+m>=l && m+l>=n && l+n>=m) 
+                     then True
+                     else False
+
+isEquilateral :: Integer -> Integer -> Integer -> Bool
+isEquilateral n m l = if (n==m && m==l) 
+                     then True
+                     else False
+
+isIsosceles :: Integer -> Integer -> Integer -> Bool
+isIsosceles n m l = if ((isTriangle n m l) && (n==m || m==l)) 
+                     then True
+                     else False
+
+isRectangular :: Integer -> Integer -> Integer -> Bool
+isRectangular n m l = if (n*n == m*m+l*l || m*m == l*l + n*n || l*l == m*m+n*n) 
+                     then True
+                     else False
+
+triangle :: Integer -> Integer -> Integer -> Shape
+triangle n m l | (isEquilateral n m l) = Equilateral
+               | (isIsosceles n m l) = Isosceles
+               | (isRectangular n m l) = Rectangular
+               | (isTriangle n m l)  = Other
+               | otherwise = NoTriangle
+
+-- Random generation triangles for testing
+
+randomTriangle :: IO [Integer]
+randomTriangle = do
+               n <- randomRIO (1,1000)
+               m <- randomRIO (1,1000)
+               l <- randomRIO ((max n m)-(min n m)+1,n+m)
+               return [n,m,l]
+
+randomNoTriangle :: IO [Integer]
+randomNoTriangle = do
+               n <- randomRIO (1,1000)
+               m <- randomRIO (1,1000)
+               l <- randomRIO (n+m+1,2000)
+               return [n,m,l]
+
+randomEquilateral :: IO [Integer]
+randomEquilateral = do
+               n <- randomRIO (1,1000)
+               return [n,n,n]
+
+randomIsosceles :: IO [Integer]
+randomIsosceles = do
+               n <- randomRIO (1,1000)
+               m <- randomRIO (n+1,2*n) 
+               return [n,n,m]
+
+randomRectangular :: IO [Integer]
+randomRectangular = do
+               n <- randomRIO (1,1000)
+               m <- randomRIO (n+1,2*n)
+               return [n,m,n*n + m*m]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
