@@ -232,7 +232,18 @@ derangementTest n = (n >= 2 && n <= 7) ==> length (deran [1..n]) == subfact n
 
 derangementQuickCheck = quickCheck derangementTest
 
--- [JAKOB Insert text]
+{-
+  To test if `isDerangement` is actually working, I made use of the fact
+  that the length of the derangements of a list `[0..(n-1)]` is the subfactorial
+  of n. Actually, any list of length n works in the same fashion.
+  Consequently, I wrote a function `subfact` that calculates the subfactorial.
+  Finally, I wrote a function that tests if the stated property holds.
+  The only problem is that calculating the derangements and the subfactorial
+  for integers larger than 10 takes a really long time or might not finish at all.
+  Therefore, I limited the numbers QuickCheck tests to numbers not larger than 8.
+  This unfortunately does not generate enough tests for QuickCheck and the test
+  'gives up'. However, the general idea works and all of the ran tests do pass.
+-}
 
 
 -- Exercise 6
@@ -341,6 +352,9 @@ iban (cc1:cc2:cd1:cd2:xs) = fromMaybe False $ do
   let validCheckDigit = validateIbanCheckDigit iban
   return (validCountry && validLength && validCheckDigit)
 
+validIbans = ["AL35202111090000000001234567", "AT483200000012345864", "MT31MALT01100000000000000000123", "SC52BAHL01031234567890123456USD", "NO8330001234567"]
+validIbansTest = map iban validIbans
+
 incorrectCountryCode :: Gen [Char]
 incorrectCountryCode = do
   randomPos1 <- choose (0, ((length uppercaseAlphabet) - 1))
@@ -436,3 +450,14 @@ instance Arbitrary InvalidIban where
 
 prop_validIban (ValidIban (Iban cs)) = iban cs
 prop_invalidIban (InvalidIban (Iban cs)) = not $ iban cs
+
+{-
+  There are two ways of varifying that the `iban` function is working.
+  One can test actual, valid IBANs or generate invalid ones on purpose.
+
+  For testing actual IBANs, I just used a list of valid ones out of the internet.
+  For testing invalid ones, I wrote a function that generates a non-existent
+  country code and an IBAN that is 37 digits in length – no country's IBANs
+  are that long. The resulting IBAN should therefore be wrong in any case
+  and `iban` should return `False`.
+-}
