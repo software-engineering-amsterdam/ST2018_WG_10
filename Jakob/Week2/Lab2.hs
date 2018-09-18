@@ -248,7 +248,7 @@ countryLength countryCode = do
   countries <- ibanCountries
   return (findCountryLength countries countryCode)
 
-iban :: String -> IO (Bool)
+iban :: String -> IO Bool
 iban (cc1:cc2:cd1:cd2:xs) = do
   let iban = (cc1:cc2:cd1:cd2:xs)
   let countryCode = [cc1] ++ [cc2]
@@ -258,6 +258,9 @@ iban (cc1:cc2:cd1:cd2:xs) = do
   let validLength = expectedLength == length iban
   let validCheckDigit = validateIbanCheckDigit iban
   return (validCountry && validLength && validCheckDigit)
+
+validIbans = ["AL35202111090000000001234567", "AT483200000012345864", "MT31MALT01100000000000000000123", "SC52BAHL01031234567890123456USD", "NO8330001234567"]
+validIbansTest = map iban validIbans
 
 incorrectCountryCode :: IO String
 incorrectCountryCode = do
@@ -287,5 +290,27 @@ generateInvalidIban :: IO String
 generateInvalidIban = do
   countryCode <- incorrectCountryCode
   randomIbanDigits <- incorrectIbanLength
-  let invalidIban = countryCode ++ (show randomIbanDigits)
-  return invalidIban
+  return (countryCode ++ (show randomIbanDigits))
+
+invalidIbanTest :: IO Bool
+invalidIbanTest = do
+  invalidIban <- generateInvalidIban
+  iban invalidIban
+
+invalidIbanCheck :: [IO Bool]
+invalidIbanCheck = replicate 100 invalidIbanTest
+
+{-
+  There are two ways of varifying that the `iban` function is working.
+  One can test actual, valid IBANs or generate invalid ones on purpose.
+
+  For testing actual IBANs, I just used a list of valid ones out of the internet.
+  For testing invalid ones, I wrote a function that generates a non-existent
+  country code and an IBAN that is 37 digits in length – no country's IBANs
+  are that long. The function `generateInvalidIban` combines it to a full IBAN.
+  Finally, `invalidIbanTest` runs the `iban` function on a randomly generated
+  invalid IBAN and always yields false. This is verified by `invalidIbanCheck`
+  which runs it 100 times and returns :: [True].
+
+  This way, both valid as well as invalid IBANs can be tested and yield the correct results.
+-}
