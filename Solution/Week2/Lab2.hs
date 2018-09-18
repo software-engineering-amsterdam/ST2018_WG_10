@@ -462,7 +462,6 @@ checkIban = do
     quickCheck prop_invalidIban
 
 
-
 {-
   There are two ways of varifying that the `iban` function is working.
   One can test actual, valid IBANs or generate invalid ones on purpose.
@@ -475,5 +474,4 @@ checkIban = do
   and `iban` should return `False`.
   The other function takes valid IBANs and introduces transposition errors – IBANs
   with transposition errors should always be invalid.
-
 -}
