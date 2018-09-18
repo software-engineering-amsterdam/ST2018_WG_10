@@ -119,7 +119,7 @@ triangle a b c | triangleImpossible (a,b,c)  = NoTriangle
 
 -- 4)
 
--- 5) (30 Min.)
+-- 5) (45 Min.)
 
 isDerangement :: (Eq a, Integral a) => [a] -> [a] -> Bool
 isDerangement [] []         = True
@@ -135,12 +135,21 @@ subfact 1 = 0
 subfact n = (n - 1) * (subfact (n - 2) + subfact (n - 1))
 
 derangementTest :: Int -> Property
-derangementTest n = (n >= 2 && n <= 7) ==> length (deran [1..n]) == subfact n
+derangementTest n = (n >= 2 && n <= 7) ==> length (deran [0..(n-1)]) == subfact n
 
 derangementQuickCheck = quickCheck derangementTest
 
 {-
-
+  To test if `isDerangement` is actually working, I made use of the fact
+  that the length of the derangements of a list `[0..(n-1)]` is the subfactorial
+  of n. Actually, any list of length n works in the same fashion.
+  Consequently, I wrote a function `subfact` that calculates the subfactorial.
+  Finally, I wrote a function that tests if the stated property holds.
+  The only problem is that calculating the derangements and the subfactorial
+  for integers larger than 10 takes a really long time or might not finish at all.
+  Therefore, I limited the numbers QuickCheck tests to numbers not larger than 8.
+  This unfortunately does not generate enough tests for QuickCheck and the test
+  'gives up'. However, the general idea works and all of the ran tests do pass.
 -}
 
 
@@ -250,7 +259,7 @@ iban (cc1:cc2:cd1:cd2:xs) = do
   let validCheckDigit = validateIbanCheckDigit iban
   return (validCountry && validLength && validCheckDigit)
 
-incorrectCountryCode :: IO [Char]
+incorrectCountryCode :: IO String
 incorrectCountryCode = do
   randomPos1 <- randomRIO (0, ((length uppercaseAlphabet) - 1))
   let firstLetter = uppercaseAlphabet !! randomPos1
@@ -274,13 +283,9 @@ incorrectIbanLength = do
   randomTooLongIban <- randomRIO (smallestNumberForAmountOfDigits 35, largestNumberForAmountOfDigits 35)
   return randomTooLongIban
 
-generateInvalidIban :: IO [Char]
+generateInvalidIban :: IO String
 generateInvalidIban = do
   countryCode <- incorrectCountryCode
   randomIbanDigits <- incorrectIbanLength
   let invalidIban = countryCode ++ (show randomIbanDigits)
   return invalidIban
-
-{-
-
--}
