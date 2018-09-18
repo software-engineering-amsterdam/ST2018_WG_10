@@ -97,6 +97,7 @@ triangleTest a b c = do
 
 -- The special cases of degenerate triangles are classified as NoTriangle, e.g. triangleTest 1 2 3 == NoTriangle
 
+
 -- Excercise 3
 
 data PropDef = PropDef String (Integer -> Bool)
@@ -290,8 +291,6 @@ checkRot13 = do
 
 -- Exercise 7
 
--- 7) (180 Min.)
-
 -- Only works with `Data.Aeson` imported
 -- data IbanCountry =
 --   IbanCountry {
@@ -300,7 +299,6 @@ checkRot13 = do
 --     , code       :: String
 --     , format     :: String
 --   } deriving (Show, Generic, ToJSON, FromJSON)
-
 
 lowercaseAlphabet = ['a'..'z']
 
