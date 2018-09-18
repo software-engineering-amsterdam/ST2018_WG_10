@@ -119,18 +119,32 @@ triangle a b c | triangleImpossible (a,b,c)  = NoTriangle
 
 -- 4)
 
--- 5) (20 Min.)
+-- 5) (30 Min.)
 
 isDerangement :: (Eq a, Integral a) => [a] -> [a] -> Bool
-isDerangement [] [] = True
+isDerangement [] []         = True
 isDerangement (x:xs) (y:ys) = x /= y && isDerangement xs ys
 
 deran :: (Eq a, Integral a) => [a] -> [[a]]
 deran [] = []
 deran xs = filter (isDerangement xs) (permutations xs)
 
+subfact :: (Eq a, Num a) => a -> a
+subfact 0 = 1
+subfact 1 = 0
+subfact n = (n - 1) * (subfact (n - 2) + subfact (n - 1))
 
--- 6)
+derangementTest :: Int -> Property
+derangementTest n = (n >= 2 && n <= 7) ==> length (deran [1..n]) == subfact n
+
+derangementQuickCheck = quickCheck derangementTest
+
+{-
+  
+-}
+
+
+-- 6) (45 Min.)
 
 {-
   ROT13 is a simple cipher with no real cryptographic security.
@@ -153,7 +167,7 @@ rot13 (x:xs) = rot13 [x] ++ rot13 xs
 -}
 
 
--- 7) (60 Min.)
+-- 7) (120 Min.)
 
 data IbanCountry =
   IbanCountry {
@@ -222,6 +236,25 @@ iban (cc1:cc2:cd1:cd2:xs) = do
   let validCheckDigit = validateIbanCheckDigit iban
   return (validCountry && validLength && validCheckDigit)
 
+-- invalidCountryCode :: Gen String
+potentiallyCountryCode = do
+  randomPos1 <- randomRIO (0, ((length uppercaseAlphabet) - 1))
+  let firstLetter = uppercaseAlphabet !! randomPos1
+  randomPos2 <- randomRIO (0, ((length uppercaseAlphabet) - 1))
+  let secondLetter = uppercaseAlphabet !! randomPos2
+  let countryCode = firstLetter:secondLetter:[]
+  -- validCountryCodes <- countryCodes
+  if not(elem countryCode []) then
+    return countryCode
+  else
+    potentiallyCountryCode
+
+invalidCountryCode = do
+  validCountryCodes <- countryCodes
+  countryCode <- potentiallyCountryCode
+  let valid = elem countryCode validCountryCodes
+  return valid
+
 {-
-  Here goes the test report.
+
 -}
