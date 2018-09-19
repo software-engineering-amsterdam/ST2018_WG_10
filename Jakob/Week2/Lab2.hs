@@ -259,8 +259,11 @@ iban (cc1:cc2:cd1:cd2:xs) = do
   let validCheckDigit = validateIbanCheckDigit iban
   return (validCountry && validLength && validCheckDigit)
 
+validIbans :: [String]
 validIbans = ["AL35202111090000000001234567", "AT483200000012345864", "MT31MALT01100000000000000000123", "SC52BAHL01031234567890123456USD", "NO8330001234567"]
-validIbansTest = map iban validIbans
+
+validIbansTest :: IO [Bool]
+validIbansTest = sequence (map iban validIbans)
 
 incorrectCountryCode :: IO String
 incorrectCountryCode = do
@@ -297,8 +300,8 @@ invalidIbanTest = do
   invalidIban <- generateInvalidIban
   iban invalidIban
 
-invalidIbanCheck :: [IO Bool]
-invalidIbanCheck = replicate 100 invalidIbanTest
+invalidIbanCheck :: IO [Bool]
+invalidIbanCheck = sequence (replicate 100 invalidIbanTest)
 
 {-
   There are two ways of varifying that the `iban` function is working.
@@ -310,7 +313,7 @@ invalidIbanCheck = replicate 100 invalidIbanTest
   are that long. The function `generateInvalidIban` combines it to a full IBAN.
   Finally, `invalidIbanTest` runs the `iban` function on a randomly generated
   invalid IBAN and always yields false. This is verified by `invalidIbanCheck`
-  which runs it 100 times and returns :: [True].
+  which runs it 100 times and returns :: IO [False].
 
   This way, both valid as well as invalid IBANs can be tested and yield the correct results.
 -}
