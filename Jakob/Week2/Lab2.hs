@@ -303,6 +303,15 @@ invalidIbanTest = do
 invalidIbanCheck :: IO [Bool]
 invalidIbanCheck = sequence (replicate 100 invalidIbanTest)
 
+countryCodeTest = do
+  countryCode <- incorrectCountryCode
+  validCountryCodes <- countryCodes
+  return (elem countryCode validCountryCodes)
+
+countryCodeCheck = do
+  l <- sequence (replicate 100000 countryCodeTest)
+  return (foldl1 (||) l)
+
 {-
   There are two ways of varifying that the `iban` function is working.
   One can test actual, valid IBANs or generate invalid ones on purpose.
