@@ -49,6 +49,7 @@ parseTest f = ([f] :: [Form]) == (parse . show $ f)
 
 bool2cnf :: Form -> Form
 bool2cnf (Prop x)                 = Prop x
+bool2cnf (Neg (Prop x))           = Neg (Prop x)
 bool2cnf (Cnj fs)                 = Cnj (map bool2cnf fs)
 bool2cnf (Dsj [f1, Cnj [f2, f3]]) = Cnj [bool2cnf (Dsj [f1, f2]), bool2cnf (Dsj [f1, f3])]
 bool2cnf (Dsj [Cnj [f2, f3], f1]) = Cnj [bool2cnf (Dsj [f1, f2]), bool2cnf (Dsj [f1, f3])]
