@@ -31,7 +31,18 @@ equiv f g = entails f g && entails g f
 -}
 
 
--- Exercise 2
+-- Exercise 2 (5 Min.)
+
+parseTest :: Form -> Bool
+parseTest f = ([f] :: [Form]) == (parse . show $ f)
+
+{-
+  I am missing an `Arbitrary` instance of `Form` for QuickCheck to use here :(
+  But generally one could just compare if the `parse` function returns the same
+  form that was put into it when casting it into a string beforehand.
+  If I can manage to write the `Arbitrary` instance, the function can just be
+  run via QuickCheck with: `quickCheck parseTest`.
+-}
 
 
 -- Exercise 3 (120 Min.)
@@ -47,8 +58,8 @@ cnf :: Form -> Form
 cnf = bool2cnf . nnf . arrowfree
 
 {-
-  The `cnf` function performs a composition on the `nnf` function, composed
-  with the `arrowfree` function.
+  The `cnf` function performs a composition on the `bool2cnf` function, composed
+  with the `nnf` function, composed with the `arrowfree` function.
 
   The type signature of `cnf` is `:: Form -> Form`.
   Consequently, the `Form` is first passed into the `arrowfree` function
