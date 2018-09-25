@@ -31,16 +31,8 @@ entails a b = tautology $ Impl a b
 equiv :: Form -> Form -> Bool
 equiv a b = (a `entails` b) && (b `entails` a)
 
-
-
-
 satVals :: [Valuation] -> Form -> [Valuation]
 satVals vals form = filter (\val -> evl val form) vals
-
-(<|>) :: Eq a => [a] -> [a] -> [a]
-(<|>) = union
-(<&>) :: Eq a => [a] -> [a] -> [a]
-(<&>) = intersect
 
 -- (Prop n) is always satisfiable.
 --  > contradiction (Prop n) = False
@@ -83,7 +75,6 @@ prop_Tautology form = tautology form == contradiction (Neg form)
 prop_Equiv a b = equiv a b == tautology (Equiv a b)
 prop_Entails a b = entails a b == tautology (Impl a b)
 
-
 exercise1 :: IO ()
 exercise1 = do
     putStrLn "Exercise 1:"
@@ -102,7 +93,7 @@ exercise1 = do
     putStrLn ""
 
 -- Exercise 2. --
-
+-- =========== --
 
 -- Just test whether the parsed string is equal to the original form.
 prop_parse form = parse (show form) == [form]
@@ -117,63 +108,90 @@ exercise2 = do
     putStrLn ""
 
 -- Exercise 3. --
-
+-- =========== --
 
 -- Simplified CNF data type
 type Atom = Int
 type Clause = [Atom]
 type Clauses = [Clause]
 
--- simplifyCnf is used to simplify intermediate results, which drastically
--- improves performance.
-simplifyCnf :: Clauses -> Clauses
-simplifyCnf cls = sortUniq $ filter (not.isTautology) $ map sortUniq cls
+toCnf :: Form -> Clauses
+toCnf = toCnfClauses . negToAtoms . implToDsj
     where
-        sortUniq :: (Ord a, Eq a) => [a] -> [a]
-        sortUniq = map head . group . sort
+        -- Rewrite bi-implication as conjunction of implications,
+        -- followed by implications as disjunction:
+        -- a <-> b ==> a -> b ∧ b -> a
+        -- a -> b ==> ¬a ∨ b
+        implToDsj :: Form -> Form
+        implToDsj (Prop a) = Prop a
+        implToDsj (Neg f) = Neg $ implToDsj f
+        implToDsj (Dsj fs) = Dsj $ map implToDsj fs
+        implToDsj (Cnj fs) = Cnj $ map implToDsj fs
+        implToDsj (Equiv f g) = implToDsj $ Cnj [Impl f g, Impl g f]
+        implToDsj (Impl f g) = implToDsj $ Dsj [Neg f, g]
 
-        -- tests for occurrences of (a ∨ ¬a ∨ ...)
-        isTautology :: [Atom] -> Bool
-        isTautology [] = False
-        isTautology (a:as) = atomNeg a `elem` as || isTautology as
+        -- Apply De Morgan's laws to move negations to atoms,
+        -- eliminate double negations
+        negToAtoms :: Form -> Form
+        negToAtoms (Prop f) = Prop f
+        negToAtoms (Neg (Prop f)) = Neg (Prop f)
+        negToAtoms (Neg (Cnj fs)) = negToAtoms $ Dsj $ map Neg fs
+        negToAtoms (Neg (Dsj fs)) = negToAtoms $ Cnj $ map Neg fs
+        negToAtoms (Neg (Neg f)) = negToAtoms f
+        negToAtoms (Dsj fs) = Dsj $ map negToAtoms fs
+        negToAtoms (Cnj fs) = Cnj $ map negToAtoms fs
+        negToAtoms a = error $ "Unexpected formula: " ++ show a
 
+        -- Simplify the CNF to make it run a bit faster:
+        -- Eliminate duplicate atoms: (a ∨ a) |= a
+        -- Eliminate duplicate clauses: (a ∨ b) ∧ (a ∨ b) |= (a ∨ b)
+        -- Eliminate tautologies: (a ∨ ¬a ∨ b) |= T
+        -- Eliminate contradictions: (a ∨ b) ∧ (¬b) |= a
+        simplify :: Clauses -> Clauses
+        simplify = fc . map head . group . sort . eliminateTautologies . map simplifyClause
+            where
+                fc xs
+                    | filterContradictions xs == xs = xs
+                    | otherwise = fc $ filterContradictions xs
 
-atomNeg :: Atom -> Atom
-atomNeg a = -a
+                filterContradictions :: Clauses -> Clauses
+                filterContradictions cs = map (\c -> c \\ units cs) cs
+                    where
+                        units = map (negate . head) . filter ((==1) . length)
 
--- distribute the clauses of one CNF formula over the other
-distribute :: Clauses -> Clauses -> Clauses
-distribute as bs = concat $ map (\b -> distributeClause b as) bs
+                simplifyClause :: Clause -> Clause
+                simplifyClause = map head . group . sort
 
--- distribute a single clause over the CNF
-distributeClause :: Clause -> Clauses -> Clauses
-distributeClause b as = map (b++) as
+                isTautology :: Clause -> Bool
+                isTautology [] = False
+                isTautology (c:cs) = -c `elem` cs || isTautology cs
 
-disjCnf :: Clauses -> Clauses -> Clauses
-disjCnf as bs = simplifyCnf $ distribute as bs
+                eliminateTautologies :: Clauses -> Clauses
+                eliminateTautologies = filter (not . isTautology)
 
-conjCnf :: Clauses -> Clauses -> Clauses
-conjCnf as bs = simplifyCnf (as ++ bs)
+        -- Convert formula of Dsj, Cnj and Atoms to CNF
+        toCnfClauses :: Form -> Clauses
+        toCnfClauses = simplify . toCnfClauses' where
+            toCnfClauses' (Prop a) = [[a]]
+            toCnfClauses' (Neg (Prop a)) = [[-a]]
+            toCnfClauses' (Dsj as) = foldl' disjCnf [[]] $ map toCnfClauses as
+            toCnfClauses' (Cnj as) = foldl' conjCnf [] $ map toCnfClauses as
+            toCnfClauses' a = error $ "Unexpected formula: " ++ show a
 
-negCnf :: Clauses -> Clauses
-negCnf as = let cnfs = map (\dj -> simplifyCnf $ map (\a ->  [atomNeg a]) dj) as
-            in simplifyCnf $ foldl' disjCnf [[]] cnfs
+        -- distribute the clauses of one CNF formula over the other
+        distribute :: Clauses -> Clauses -> Clauses
+        distribute as bs = concat $ map (\b -> distributeClause b as) bs
 
-implCnf :: Clauses -> Clauses -> Clauses
-implCnf a b = negCnf a `disjCnf` b
+        -- distribute a single clause over the CNF
+        distributeClause :: Clause -> Clauses -> Clauses
+        distributeClause b as = map (b++) as
 
-equivCnf :: Clauses -> Clauses -> Clauses
-equivCnf a b = implCnf a b `conjCnf` implCnf b a
+        disjCnf :: Clauses -> Clauses -> Clauses
+        disjCnf as bs = distribute as bs
 
+        conjCnf :: Clauses -> Clauses -> Clauses
+        conjCnf = (++)
 
-toCnfClauses :: Form -> Clauses
-toCnfClauses (Prop a) = [[a]]
-toCnfClauses (Neg (Neg a)) = toCnfClauses a
-toCnfClauses (Neg a) = negCnf $ toCnfClauses a
-toCnfClauses (Dsj as) = foldl' disjCnf [[]] $ map toCnfClauses as
-toCnfClauses (Cnj as) = foldl' conjCnf [] $ map toCnfClauses as
-toCnfClauses (Equiv a b) = equivCnf (toCnfClauses a) (toCnfClauses b)
-toCnfClauses (Impl a b) = implCnf (toCnfClauses a) (toCnfClauses b)
 
 fromClauses :: Clauses -> Form
 fromClauses cnf = Cnj $ map clauseToForm cnf where
@@ -185,7 +203,7 @@ fromClauses cnf = Cnj $ map clauseToForm cnf where
         | otherwise = error "Atom must be non-zero"
 
 formToCnf :: Form -> Form
-formToCnf = fromClauses . toCnfClauses
+formToCnf = fromClauses . toCnf
 
 -- test if the CNF formula is equivalent to the original formula
 prop_CnfIsEquiv form = equiv (formToCnf form) form
@@ -204,10 +222,6 @@ prop_Cnf form = iscnf $ formToCnf form
         isatom _ = False
 
 
--- CNF is CNF, so repeated application should be equivalent to a  single
--- application
-prop_IsIdempotent form = (formToCnf . formToCnf) form == formToCnf form
-
 exercise3 :: IO ()
 exercise3 = do
     putStrLn "Exercise 3:"
@@ -217,17 +231,15 @@ exercise3 = do
     putStr "prop_Cnf         "
     putStr " >  "
     quickCheck prop_Cnf
-    putStr "prop_IsIdempotent"
-    putStr " >  "
-    quickCheck prop_IsIdempotent
     putStrLn ""
 
--- Exercise 4. --
+-- Exercise 4. -- (1 hr)
+-- =========== --
 
 instance Arbitrary Form where
     arbitrary = do
-        n <- choose(1, 5)
-        m <- choose(n, 2 * n) --the size is limited because toCnfClauses is difficult
+        n <- choose(1, 12)
+        m <- choose(n, 4 * n)
         genForm n m
 
         where
@@ -274,6 +286,7 @@ exercise4 = do
     putStrLn ""
 
 -- Bonus: exercise 5 -- (10 minutes)
+-- ================= --
 -- This was already done to convert Forms to CNF form. Using the [[Int]] type
 -- to define the CNF has the advantage that type correctness proves that the
 -- result is a conjunction of disjunctions, whereas the Form type could be any
@@ -281,12 +294,12 @@ exercise4 = do
 
 newtype CnfForm = CnfForm Form deriving (Show)
 
-instance Arbitrary (CnfForm)
+instance Arbitrary CnfForm
     where
         arbitrary = CnfForm <$> formToCnf <$> arbitrary
 
 cnf2cls :: Form -> Clauses
-cnf2cls = toCnfClauses
+cnf2cls = toCnf
 
 -- Test if the Clauses representation is equivalent to the Form representation
 prop_CnfClausesEquiv (CnfForm form) = prop_Cnf form ==>
@@ -297,3 +310,6 @@ exercise5 = do
     putStrLn "Exercise 5 (bonus):"
     putStr " >  "
     quickCheck prop_CnfClausesEquiv
+
+
+
