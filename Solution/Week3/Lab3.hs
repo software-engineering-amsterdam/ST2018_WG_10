@@ -108,9 +108,23 @@ type Atom = Int
 type Clause = [Atom]
 type Clauses = [Clause]
 
+cnf :: Form -> Form
+cnf = fromClauses . toCnf
+
 toCnf :: Form -> Clauses
 toCnf = toCnfClauses . nnf . arrowfree
     where
+        -- Recursively convert formula of Dsj, Cnj and Atoms to a Clauses
+        -- Disjunctions are distributed over conjunctions
+        -- Conjunctions are concatenated.
+        toCnfClauses :: Form -> Clauses
+        toCnfClauses = simplify . toCnfClauses' where
+            toCnfClauses' (Prop a) = [[a]]
+            toCnfClauses' (Neg (Prop a)) = [[-a]]
+            toCnfClauses' (Dsj as) = foldl' distribute [[]] $ map toCnfClauses as
+            toCnfClauses' (Cnj as) = foldl' (++) [] $ map toCnfClauses as
+            toCnfClauses' a = error $ "Unexpected formula: " ++ show a
+
         -- Simplify the CNF to make it run a bit faster:
         -- Eliminate duplicate atoms: (a ∨ a) |= a
         -- Eliminate duplicate clauses: (a ∨ b) ∧ (a ∨ b) |= (a ∨ b)
@@ -132,20 +146,13 @@ toCnf = toCnfClauses . nnf . arrowfree
                 simplifyClause = map head . group . sort
 
                 isTautology :: Clause -> Bool
-                isTautology [] = False
+                isTautology []     = False
                 isTautology (c:cs) = -c `elem` cs || isTautology cs
 
                 eliminateTautologies :: Clauses -> Clauses
                 eliminateTautologies = filter (not . isTautology)
 
-        -- Convert formula of Dsj, Cnj and Atoms to CNF
-        toCnfClauses :: Form -> Clauses
-        toCnfClauses = simplify . toCnfClauses' where
-            toCnfClauses' (Prop a) = [[a]]
-            toCnfClauses' (Neg (Prop a)) = [[-a]]
-            toCnfClauses' (Dsj as) = foldl' disjCnf [[]] $ map toCnfClauses as
-            toCnfClauses' (Cnj as) = foldl' conjCnf [] $ map toCnfClauses as
-            toCnfClauses' a = error $ "Unexpected formula: " ++ show a
+
 
         -- Distribute the clauses of one CNF formula over the other
         distribute :: Clauses -> Clauses -> Clauses
@@ -155,15 +162,9 @@ toCnf = toCnfClauses . nnf . arrowfree
         distributeClause :: Clause -> Clauses -> Clauses
         distributeClause b as = map (b++) as
 
-        disjCnf :: Clauses -> Clauses -> Clauses
-        disjCnf as bs = distribute as bs
-
-        conjCnf :: Clauses -> Clauses -> Clauses
-        conjCnf = (++)
-
 
 fromClauses :: Clauses -> Form
-fromClauses cnf = Cnj $ map clauseToForm cnf where
+fromClauses c = Cnj $ map clauseToForm c where
     clauseToForm :: Clause -> Form
     clauseToForm as = Dsj $ map atom as
     atom a
@@ -171,29 +172,28 @@ fromClauses cnf = Cnj $ map clauseToForm cnf where
         | a > 0 = Prop a
         | otherwise = error "Atom must be non-zero"
 
-formToCnf :: Form -> Form
-formToCnf = fromClauses . toCnf
 
 -- Test if the CNF formula is equivalent to the original formula
-prop_CnfIsEquiv form = equiv (formToCnf form) form
+prop_CnfIsEquiv form = equiv (cnf form) form
 
 -- Test if the result is CNF
-prop_Cnf form = iscnf $ formToCnf form
+prop_Cnf form = iscnf $ cnf form
     where
         iscnf (Cnj xs) = all isclause xs
-        iscnf _ = False
+        iscnf _        = False
 
         isclause (Dsj xs) = all isatom xs
-        isclause _ = False
+        isclause _        = False
 
         isatom (Neg (Prop _)) = True
-        isatom (Prop _) = True
-        isatom _ = False
+        isatom (Prop _)       = True
+        isatom _              = False
 
 
 exercise3 :: IO ()
 exercise3 = do
     putStrLn "Exercise 3:"
+    putStrLn "(this might take a few seconds)"
     putStr "prop_CnfIsEquiv  "
     putStr " >  "
     quickCheck prop_CnfIsEquiv
