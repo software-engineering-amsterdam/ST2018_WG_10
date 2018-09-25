@@ -205,7 +205,8 @@ exercise3 = do
 
 {-
   The `cnf` function performs a composition on the `bool2cnf` function, composed
-  with the `nnf` function, composed with the `arrowfree` function.
+  with the `nnf` function, composed with the `arrowfree` function, and converts
+  the NNF to an [[Atom]] type CNF. The CNF is then converted back to a Form.
 
   The type signature of `cnf` is `:: Form -> Form`.
   Consequently, the `Form` is first passed into the `arrowfree` function
@@ -213,27 +214,25 @@ exercise3 = do
   This is necessary owing to the fact that a CNF only consists of conjunctions
   and disjunctions. Moreover, nothing apart from atoms can be negated in a CNF.
   Thus, the `nnf` function is part of the composition as well.
-  Finally, the `bool2cnf` takes an non-negated, arrow-free, boolean,
-  propositional formula. This input constraint was achieved by composing the
-  other two functions. Ergo, the signature of it is `:: Form -> Form` as well.
+  Finally, the `toCnfClauses` takes a formula in NNF form, and converts it to
+  a list of list of atoms (Clauses), representing the CNF. Ergo, the signature
+  of it is `:: Form -> Clauses`.
 
-  The `bool2cnf` function uses four pattern matches for the conversation.
+  The `toCnfClauses` function uses four pattern matches for the conversation.
   When given a parametrised `Prop` type, it is directly returned since no
   further processing is needed.
-  When a singular conjunction is passed into the function, the `cnf` function
-  gets mapped onto the contents of the parametrised type while wrapping the
-  result in another conjunction due to the fact that a CNF can only consist
+  When a singular conjunction is passed into the function, the `toCnfClause`
+  function gets mapped onto the contents of the parametrised type while wrapping
+  the result in another conjunction due to the fact that a CNF can only consist
   of conjunctions between clauses.
-  The third and fourth pattern matches catch forms that can be converted to a
+  The third pattern match catches forms that can be converted to a
   CNF by applying the distributive law
   (e.g.: f1 v (f2 ∧ f3) === (f1 v f2) ∧ (f1 v f3)).
-  Two different patterns were used to capture both directions of this form
-  (the singular atom in front of the conjunction as well as after it).
-  The outermost connective is a conjunction while the two inner clauses
-  are getting recursively processed after the distributive law was applied.
-  If the distributive law cannot be applied, the fifth pattern matches.
-  In that case, the contents of the parametrised `Dsj` type are mapped via
-  the `bool2cnf` function while wrapping them again in a `Dsj` type.
+  The fourth pattern match catches conjunctions and concatenates the constructed
+  CNFs of the subformulas together to form one CNF.
+
+  Finally, the whole CNF is simplified by eliminating tautologies and contradictions
+  in order to speed up the process.
 
   Overall, due to its recursive nature, even deeply nested non-CNFs can be
   converted to a valid CNF.
@@ -241,12 +240,15 @@ exercise3 = do
 
 
 -- 4)
-
+--
 instance Arbitrary Form where
-    arbitrary = do
-        n <- choose(1, 5)
-        m <- choose(n, 2 * n) -- The size is limited because toCnfClauses is difficult
-        genForm n m
+    arbitrary = sized $ \n -> do
+
+        -- limit size for reasonable execution time
+        let size = min 30 (n + 1)
+        let nAtoms = ceiling $ sqrt $ fromIntegral $ size
+
+        genForm nAtoms size
 
         where
             genForm :: Int -> Int -> Gen Form
@@ -291,10 +293,10 @@ newtype CnfForm = CnfForm Form deriving (Show)
 
 instance Arbitrary (CnfForm)
     where
-        arbitrary = CnfForm <$> formToCnf <$> arbitrary
+        arbitrary = CnfForm <$> cnf <$> arbitrary
 
 cnf2cls :: Form -> Clauses
-cnf2cls = toCnfClauses
+cnf2cls = toCnf
 
 -- Test if the Clauses representation is equivalent to the Form representation
 prop_CnfClausesEquiv (CnfForm form) = prop_Cnf form ==>
