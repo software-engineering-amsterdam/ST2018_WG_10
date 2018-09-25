@@ -204,7 +204,7 @@ exercise3 = do
 
 
 {-
-  The `cnf` function performs a composition on the `bool2cnf` function, composed
+  The `cnf` function performs a composition on the `toCnfClauses` function, composed
   with the `nnf` function, composed with the `arrowfree` function, and converts
   the NNF to an [[Atom]] type CNF. The CNF is then converted back to a Form.
 
@@ -241,6 +241,12 @@ exercise3 = do
 
 -- 4)
 --
+
+{-
+  Arbitrary Form generates an arbitrary clause (a Prop, Neg, Dsj, Cnj, Impl, or
+  Equiv), using QuickCheck's "oneof" function, and recursively generates
+  subclauses such that it forms one large valid formula.
+-}
 instance Arbitrary Form where
     arbitrary = sized $ \n -> do
 
@@ -254,6 +260,9 @@ instance Arbitrary Form where
             genForm :: Int -> Int -> Gen Form
             genForm nprop 0 = genProp nprop 0
             genForm nprop size = oneof $ map (\gen -> gen nprop size) clauseGens
+
+            clauseGens :: [Int -> Int -> Gen Form]
+            clauseGens = [genNeg, genProp, genDsj, genCnj, genImpl, genEquiv]
 
             genNeg :: Int -> Int -> Gen Form
             genNeg nprop size = Neg <$> genForm nprop (size - 1)
@@ -278,8 +287,6 @@ instance Arbitrary Form where
             genEquiv :: Int -> Int -> Gen Form
             genEquiv nprop size = Equiv <$> genForm nprop (size `quot` 2) <*> genForm nprop (size `quot` 2)
 
-            clauseGens :: [Int -> Int -> Gen Form]
-            clauseGens = [genNeg, genProp, genDsj, genCnj, genImpl, genEquiv]
 
 
 -- 5) (Bonus)
