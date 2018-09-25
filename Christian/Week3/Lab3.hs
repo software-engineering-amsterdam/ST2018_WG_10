@@ -115,32 +115,23 @@ type Atom = Int
 type Clause = [Atom]
 type Clauses = [Clause]
 
-toCnf :: Form -> Clauses
-toCnf = toCnfClauses . negToAtoms . implToDsj
-    where
-        -- Rewrite bi-implication as conjunction of implications,
-        -- followed by implications as disjunction:
-        -- a <-> b ==> a -> b ∧ b -> a
-        -- a -> b ==> ¬a ∨ b
-        implToDsj :: Form -> Form
-        implToDsj (Prop a) = Prop a
-        implToDsj (Neg f) = Neg $ implToDsj f
-        implToDsj (Dsj fs) = Dsj $ map implToDsj fs
-        implToDsj (Cnj fs) = Cnj $ map implToDsj fs
-        implToDsj (Equiv f g) = implToDsj $ Cnj [Impl f g, Impl g f]
-        implToDsj (Impl f g) = implToDsj $ Dsj [Neg f, g]
+cnf :: Form -> Form
+cnf = fromClauses . toCnf
 
-        -- Apply De Morgan's laws to move negations to atoms,
-        -- eliminate double negations
-        negToAtoms :: Form -> Form
-        negToAtoms (Prop f) = Prop f
-        negToAtoms (Neg (Prop f)) = Neg (Prop f)
-        negToAtoms (Neg (Cnj fs)) = negToAtoms $ Dsj $ map Neg fs
-        negToAtoms (Neg (Dsj fs)) = negToAtoms $ Cnj $ map Neg fs
-        negToAtoms (Neg (Neg f)) = negToAtoms f
-        negToAtoms (Dsj fs) = Dsj $ map negToAtoms fs
-        negToAtoms (Cnj fs) = Cnj $ map negToAtoms fs
-        negToAtoms a = error $ "Unexpected formula: " ++ show a
+toCnf :: Form -> Clauses
+toCnf = toCnfClauses . nnf . arrowfree
+    where
+
+        -- Recursively convert formula of Dsj, Cnj and Atoms to a Clauses
+        -- Disjunctions are distributed over conjunctions
+        -- Conjunctions are concatenated.
+        toCnfClauses :: Form -> Clauses
+        toCnfClauses = simplify . toCnfClauses' where
+            toCnfClauses' (Prop a) = [[a]]
+            toCnfClauses' (Neg (Prop a)) = [[-a]]
+            toCnfClauses' (Dsj as) = foldl' distribute [[]] $ map toCnfClauses as
+            toCnfClauses' (Cnj as) = foldl' (++) [] $ map toCnfClauses as
+            toCnfClauses' a = error $ "Unexpected formula: " ++ show a
 
         -- Simplify the CNF to make it run a bit faster:
         -- Eliminate duplicate atoms: (a ∨ a) |= a
@@ -169,16 +160,10 @@ toCnf = toCnfClauses . negToAtoms . implToDsj
                 eliminateTautologies :: Clauses -> Clauses
                 eliminateTautologies = filter (not . isTautology)
 
-        -- Convert formula of Dsj, Cnj and Atoms to CNF
-        toCnfClauses :: Form -> Clauses
-        toCnfClauses = simplify . toCnfClauses' where
-            toCnfClauses' (Prop a) = [[a]]
-            toCnfClauses' (Neg (Prop a)) = [[-a]]
-            toCnfClauses' (Dsj as) = foldl' disjCnf [[]] $ map toCnfClauses as
-            toCnfClauses' (Cnj as) = foldl' conjCnf [] $ map toCnfClauses as
-            toCnfClauses' a = error $ "Unexpected formula: " ++ show a
+
 
         -- distribute the clauses of one CNF formula over the other
+        --
         distribute :: Clauses -> Clauses -> Clauses
         distribute as bs = concat $ map (\b -> distributeClause b as) bs
 
@@ -186,15 +171,9 @@ toCnf = toCnfClauses . negToAtoms . implToDsj
         distributeClause :: Clause -> Clauses -> Clauses
         distributeClause b as = map (b++) as
 
-        disjCnf :: Clauses -> Clauses -> Clauses
-        disjCnf as bs = distribute as bs
-
-        conjCnf :: Clauses -> Clauses -> Clauses
-        conjCnf = (++)
-
 
 fromClauses :: Clauses -> Form
-fromClauses cnf = Cnj $ map clauseToForm cnf where
+fromClauses c = Cnj $ map clauseToForm c where
     clauseToForm :: Clause -> Form
     clauseToForm as = Dsj $ map atom as
     atom a
@@ -202,14 +181,12 @@ fromClauses cnf = Cnj $ map clauseToForm cnf where
         | a > 0 = Prop a
         | otherwise = error "Atom must be non-zero"
 
-formToCnf :: Form -> Form
-formToCnf = fromClauses . toCnf
 
 -- test if the CNF formula is equivalent to the original formula
-prop_CnfIsEquiv form = equiv (formToCnf form) form
+prop_CnfIsEquiv form = equiv (cnf form) form
 
 -- test if the result is CNF
-prop_Cnf form = iscnf $ formToCnf form
+prop_Cnf form = iscnf $ cnf form
     where
         iscnf (Cnj xs) = all isclause xs
         iscnf _ = False
@@ -225,6 +202,7 @@ prop_Cnf form = iscnf $ formToCnf form
 exercise3 :: IO ()
 exercise3 = do
     putStrLn "Exercise 3:"
+    putStrLn "(this might take a few seconds)"
     putStr "prop_CnfIsEquiv  "
     putStr " >  "
     quickCheck prop_CnfIsEquiv
@@ -296,7 +274,7 @@ newtype CnfForm = CnfForm Form deriving (Show)
 
 instance Arbitrary CnfForm
     where
-        arbitrary = CnfForm <$> formToCnf <$> arbitrary
+        arbitrary = CnfForm <$> cnf <$> arbitrary
 
 cnf2cls :: Form -> Clauses
 cnf2cls = toCnf
