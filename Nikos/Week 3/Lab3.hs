@@ -297,7 +297,7 @@ convertToCnf = cnf . nnf . arrowfree
 -- convertToCnf does the following
 -- 1. Eliminate Imp and Equiv (arrowfree)
 -- 2. Transform negations using de morgan until they only apply to atoms (nnf)
--- 3. Apply the distributed law --> p ∨ (q ∧ r) to (p ∨ q) ∧ (p ∨ r) (cnf)
+-- 3. Apply the distributed law --> f1 ∨ (f2 ∧ f3) to (f1 ∨ f2) ∧ (f1 ∨ f3) (cnf)
 
 
 
