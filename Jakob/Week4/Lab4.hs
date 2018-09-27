@@ -200,9 +200,22 @@ symClos []         = []
 symClos ((x,y):xs) = removeDuplicates ((x,y) : (y,x) : symClos xs)
 
 
--- 6)
+-- 6) (20 Min.)
 
+infixr 5 @@
 
+(@@) :: Eq a => Rel a -> Rel a -> Rel a
+r @@ s =
+  nub [ (x,z) | (x,y) <- r, (w,z) <- s, y == w ]
+
+trClos :: Ord a => Rel a -> Rel a
+trClos []      = []
+trClos initRel =
+  let ((x,y):xs) = removeDuplicates initRel in
+  let resRel = removeDuplicates ([(x,y)] ++ ([(x,y)] @@ xs) ++ trClos xs) in
+  if resRel == initRel
+  then resRel
+  else trClos resRel
 
 
 -- 7)
