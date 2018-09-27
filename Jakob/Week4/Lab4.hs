@@ -188,9 +188,16 @@ diffCheck = verboseCheck prop_Diff
 
 
 
--- 5)
+-- 5) (10 Min.)
 
+type Rel a = [(a,a)]
 
+removeDuplicates :: (Ord a) => [a] -> [a]
+removeDuplicates = map head . group . sort
+
+symClos :: Ord a => Rel a -> Rel a
+symClos []         = []
+symClos ((x,y):xs) = removeDuplicates ((x,y) : (y,x) : symClos xs)
 
 
 -- 6)
