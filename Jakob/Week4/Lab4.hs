@@ -10,9 +10,18 @@ import           Test.QuickCheck
 
 -- Exercises
 
--- 1)
+-- 1) (120 Min.)
 
-
+{-
+  1) The term 'Extensionality' is thrown around quite a lot while it is not
+     completely clear to me what it means in the context of proofs.
+  2) Why is the '⊆' character written in front of each proof?
+  3) What exactly is the subscript in a 'Generalized Union and Intersection'
+     formula telling me?
+  4) How does '(a,b) = {{a},{a,b}}' hold?
+  5) What is the practical reasoning behind computing the n-th powerset of
+     the empty set?
+-}
 
 
 -- 2) (15 Min.)
@@ -71,6 +80,7 @@ a \\\ b = list2set (listDiff a b)
   Property: Every element of the intersection of set A and set B should also be
   an element of both of those initial sets.
 -}
+
 intersectCompsContain :: Eq a => [a] -> Set a -> Set a -> Bool
 intersectCompsContain [] _ _                           = True
 intersectCompsContain (i:is) setA@(Set a) setB@(Set b) = (elem i a) && (elem i b) && intersectCompsContain is setA setB
@@ -103,6 +113,7 @@ intersectCheck = verboseCheck prop_Intersect
   Property: All elements from set A and set B should also be an element of
   the union of both sets.
 -}
+
 compsContainedInUnion :: Eq a => Set a -> Set a -> Set a -> Bool
 compsContainedInUnion (Set []) (Set []) (Set (us)) = True
 compsContainedInUnion (Set (a:as)) (Set []) (Set (us)) = (elem a us) && True
@@ -137,6 +148,7 @@ unionCheck = verboseCheck prop_Union
   Property: No element from the difference of set A and set B should also be an
   element of set B.
 -}
+
 compBNotContainedInDiff :: Eq a => Set a -> Set a -> Bool
 compBNotContainedInDiff _ (Set [])                = True
 compBNotContainedInDiff setB@(Set b) (Set (d:ds)) = (not (elem d b)) && compBNotContainedInDiff setB (Set ds)
@@ -192,12 +204,9 @@ diffCheck = verboseCheck prop_Diff
 
 type Rel a = [(a,a)]
 
-removeDuplicates :: (Ord a) => [a] -> [a]
-removeDuplicates = map head . group . sort
-
 symClos :: Ord a => Rel a -> Rel a
 symClos []         = []
-symClos ((x,y):xs) = removeDuplicates ((x,y) : (y,x) : symClos xs)
+symClos ((x,y):xs) = nub ((x,y) : (y,x) : symClos xs)
 
 
 -- 6) (20 Min.)
@@ -210,17 +219,84 @@ r @@ s =
 
 trClos :: Ord a => Rel a -> Rel a
 trClos []      = []
+trClos [x]     = [x]
 trClos initRel =
-  let ((x,y):xs) = removeDuplicates initRel in
-  let resRel = removeDuplicates ([(x,y)] ++ ([(x,y)] @@ xs) ++ trClos xs) in
+  let ((x,y):xs) = nub initRel in
+  let resRel = nub ([(x,y)] ++ ([(x,y)] @@ xs) ++ trClos xs) in
   if resRel == initRel
   then resRel
   else trClos resRel
 
 
--- 7)
+-- 7) (60 Min.)
+
+{-
+  symClos:
+
+  Test properties:
+  - Each element in the list is unique
+  - Each mirrored relation is also an element of the list
+  - There are no extra elements apart from the symmetric ones (smallest relation)
+-}
+
+prop_SymClosIsUnique :: Rel Int -> Bool
+prop_SymClosIsUnique rel = (nub . symClos $ rel) == symClos rel
+
+-- Takes the same relation as input twice to circumvent the fact that the
+-- full relation would otherwise get lost due to the tail recursion
+prop_SymClosMirroredElemsHelper :: Rel Int -> Rel Int -> Bool
+prop_SymClosMirroredElemsHelper _ []           = True
+prop_SymClosMirroredElemsHelper rel ((x,y):xs) = (elem (y,x) rel) && prop_SymClosMirroredElemsHelper rel xs
+
+prop_SymClosMirroredElems :: Rel Int -> Bool
+prop_SymClosMirroredElems rel = let symmetricClosure = symClos rel in prop_SymClosMirroredElemsHelper symmetricClosure symmetricClosure
+
+prop_SymClosSmallestRelHelper :: Rel Int -> Rel Int -> Bool
+prop_SymClosSmallestRelHelper _ []                          = True
+prop_SymClosSmallestRelHelper initRel symClosRel@((x,y):xs) = ((elem (x,y) initRel) || (elem (y,x) initRel)) && prop_SymClosSmallestRelHelper initRel xs
+
+prop_SymClosSmallestRel :: Rel Int -> Bool
+prop_SymClosSmallestRel rel = let symmetricClosure = symClos rel in prop_SymClosSmallestRelHelper rel symmetricClosure
+
+check_SymClosIsUnique = quickCheck prop_SymClosIsUnique
+check_SymClosMirroredElems = quickCheck prop_SymClosMirroredElems
+check_SymClosSmallestRel = quickCheck prop_SymClosSmallestRel
 
 
+{-
+  trClos:
+
+  Test properties:
+  - Each element in the list is unique
+  -
+  - There are no extra elements apart from the transitive ones (smallest relation)
+-}
+
+prop_TrClosIsUnique :: Rel Int -> Bool
+prop_TrClosIsUnique rel = (nub . trClos $ rel) == trClos rel
+
+-- prop_TrClosSmallestRelHelper :: Rel Int -> Rel Int -> Bool
+-- prop_TrClosSmallestRelHelper _ []                         = True
+-- prop_TrClosSmallestRelHelper initRel trClosRel@((x,y):xs) = ((elem (x,y) initRel) || (elem (y,x) initRel)) && prop_TrClosSmallestRelHelper initRel xs
+
+-- prop_TrClosSmallestRel :: Rel Int -> Bool
+-- prop_TrClosSmallestRel rel = let transitiveClosure = trClos rel in prop_TrClosSmallestRelHelper rel transitiveClosure
+
+check_TrClosIsUnique = verboseCheck prop_TrClosIsUnique
+-- check_SymClosMirroredElems = quickCheck prop_SymClosMirroredElems
+-- check_TrClosSmallestRel = quickCheck prop_SymClosSmallestRel
+
+
+{-
+  Test report:
+
+  QuickCheck was well suited to test the posed properties.
+  The only peculiarity was that in some cases, helper functions were
+  needed because e.g. the original relations were still needed to test
+  the property recursively – this would not have been possible with just
+  using QuickCheck one them since it would have passed two different relations
+  into the `prop_*` functions.
+-}
 
 
 -- 8)
