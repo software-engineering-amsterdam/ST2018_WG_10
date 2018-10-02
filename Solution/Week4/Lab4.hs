@@ -187,26 +187,26 @@ symClos ((x,y):xs) = (nub $ sort $ (y,x):(x,y):(symClos xs))
 
 -- 6)
 
--- Adapted to type RelSet a = Set (a, a)
-
-type RelSet a = Set (a, a)
+-- Adapted to type Rel a = Set (a, a)
 
 -- Some more useful aliases
-(⊆), (⊇) :: Ord a => Set a -> Set a -> Bool
-a ⊆ b = subSet a b
-b ⊇ a = subSet b a
+(⊆), (⊇) :: Ord a => [a] -> [a] -> Bool
+a ⊆ b = all (∈ b) a
+b ⊇ a = all (∈ b) a
 
-(∈) :: Ord a => a -> Set a -> Bool
-a ∈ as = inSet a as
+(∈) :: Ord a => a -> [a] -> Bool
+a ∈ as = a `elem` as
 
 infixr 5 @@
 
-(@@) :: (Ord a, Eq a) => RelSet a -> RelSet a -> RelSet a
-(Set r) @@ (Set s) = list2set [ (x,z) | (x,y) <- r, (w,z) <- s, y == w ]
+(@@) :: (Ord a, Eq a) => Rel a -> Rel a -> Rel a
+r @@ s = [ (x,z) | (x,y) <- r, (w,z) <- s, y == w ]
 
-trClos :: (Ord a, Eq a) => RelSet a -> RelSet a
-trClos (Set []) = Set []
-trClos s@(Set (x:xs)) = let s' = ((s @@ s) ∪ s) in if s' == s then s else trClos s'
+trClos :: (Ord a, Eq a) => Rel a -> Rel a
+trClos [] = []
+trClos s@(x:xs) = let s' = (union' (s @@ s) s) in if s' == s then s else trClos s'
+    where
+        union' xs ys = nub $ sort $ xs ++ ys
 
 
 -- 7)
@@ -256,22 +256,22 @@ check_SymClosSmallestRel = quickCheck prop_SymClosSmallestRel
   ∀ S' ⊂ S: S' is not a transitive closure of R
 -}
 
-isTransitive :: (Ord a, Eq a) => RelSet a -> Bool
-isTransitive s@(Set xs) = all (\x -> x ∈ s) [(x, z) | (x, y) <- xs, (y', z) <- xs, y == y']
+isTransitive :: (Ord a, Eq a) => Rel a -> Bool
+isTransitive s = all (\x -> x ∈ s) [(x, z) | (x, y) <- s, (y', z) <- s, y == y']
 
 prop_TrClosTransitive r = isTransitive $ trClos r
-    where types = (r :: RelSet Int)
+    where types = (r :: Rel Int)
 
 prop_TrClosSuperset r = r ⊆ trClos r
-    where types = (r :: RelSet Int)
+    where types = (r :: Rel Int)
 
-prop_TrClosSmallest r@(Set rs) = isSmallest $ trClos r
+prop_TrClosSmallest r = isSmallest $ trClos r
         where
             isSmallest s = r ⊆ s && isTransitive s && (not . hasSmaller) s
-            hasSmaller (Set []) = False
-            hasSmaller (Set [x]) = isSmallest (Set [])
-            hasSmaller s@(Set (x:y:xs)) = isSmallest (Set (x:xs)) && isSmallest (Set (y:xs))
-            types = (r :: RelSet Int)
+            hasSmaller [] = False
+            hasSmaller [x] = isSmallest []
+            hasSmaller (x:y:xs) = isSmallest (x:xs) && isSmallest (y:xs)
+            types = (r :: Rel Int)
 
 
 exercise7 = do
