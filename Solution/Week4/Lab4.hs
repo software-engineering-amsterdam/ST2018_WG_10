@@ -245,12 +245,9 @@ check_SymClosSmallestRel = quickCheck prop_SymClosSmallestRel
 {-
   trClos:
 
-  Properties of the transitive closure S of relation R:
-
+  Test properties:
   ∀ x, y, z: xSy, ySz => xSz
-
   R ⊆ S
-
   ∀ S' ⊂ S: S' is not a transitive closure of R
 -}
 
@@ -271,8 +268,7 @@ prop_TrClosSmallest r = isSmallest $ trClos r
             hasSmaller (x:y:xs) = isSmallest (x:xs) && isSmallest (y:xs)
             types = (r :: Rel Int)
 
-
-exercise7 = do
+check_TrClos = do
     putStrLn "Exercise 7:"
     putStrLn "Is Transitive:"
     quickCheck prop_TrClosTransitive
@@ -280,7 +276,6 @@ exercise7 = do
     quickCheck prop_TrClosSuperset
     putStrLn "S is minimal:"
     quickCheck prop_TrClosSmallest
-
 
 {-
   Test report:
