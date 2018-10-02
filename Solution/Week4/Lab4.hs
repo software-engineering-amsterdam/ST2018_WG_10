@@ -187,8 +187,6 @@ symClos ((x,y):xs) = (nub $ sort $ (y,x):(x,y):(symClos xs))
 
 -- 6)
 
--- Adapted to type Rel a = Set (a, a)
-
 -- Some more useful aliases
 (⊆), (⊇) :: Ord a => [a] -> [a] -> Bool
 a ⊆ b = all (∈ b) a
