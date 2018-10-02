@@ -314,7 +314,7 @@ prop_transsym ls = trClos' (length ls) (symClos ls) == symClos (trClos' (length 
                      types = (ls :: [(Int,Int)])
 
 lis = [(1,2),(2,3),(3,4)] -- A counterexample
-prop_transsym_manual = trClos' (length lis) (symClos lis) == symClos (trClos' (length lis) lis)
+prop_transsym_manual = trClos (symClos lis) == symClos (trClos lis)
 
 exercise8 :: IO()
 exercise8 = do
