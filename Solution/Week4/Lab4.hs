@@ -152,7 +152,7 @@ diffCheck = verboseCheck prop_Diff
 {-
   Test report:
 
-  In all three tests, my custom implementation of the set generator as well as
+  In all three tests, our custom implementation of the set generator as well as
   the QuickCheck version were used to test the implemented operators.
   For each operator a helper function was used that checks the test property of
   each operator specified above. Thus, it is always about checking whether
@@ -171,7 +171,9 @@ diffCheck = verboseCheck prop_Diff
 
 -- 4)
 
-
+{-
+  We had no further questions left.
+-}
 
 
 -- 5)
