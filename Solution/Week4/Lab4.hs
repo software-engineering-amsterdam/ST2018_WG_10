@@ -268,8 +268,8 @@ prop_TrClosSuperset r = r ⊆ trClos r
 prop_TrClosSmallest r = isSmallest $ trClos r
         where
             isSmallest s = r ⊆ s && isTransitive s && (not . hasSmaller) s
-            hasSmaller [] = False
-            hasSmaller [x] = isSmallest []
+            hasSmaller []       = False
+            hasSmaller [x]      = isSmallest []
             hasSmaller (x:y:xs) = isSmallest (x:xs) && isSmallest (y:xs)
             types = (r :: Rel Int)
 
@@ -298,23 +298,12 @@ exercise7 = do
 
 -- 8)
 
-infixr 5 @@@
-
-(@@@) :: Eq a => Rel a -> Rel a -> Rel a
-r @@@ s = nub [ (x,z) | (x,y) <- r, (w,z) <- s, y == w ]
-
--- The integer parameter is used as depth for the closure, put in the length
--- of the relation if you want the complete closure.
-trClos' :: Ord a => Int -> Rel a -> Rel a
-trClos' 0 a = sort a
-trClos' n a = trClos' (n-1) (nub (a ++ (a @@@ a)))
-
-prop_transsym ls = trClos' (length ls) (symClos ls) == symClos (trClos' (length ls) ls)
+prop_transsym ls = trClos (symClos ls) == symClos (trClos ls)
                    where
                      types = (ls :: [(Int,Int)])
 
 lis = [(1,2),(2,3),(3,4)] -- A counterexample
-prop_transsym_manual = trClos' (length lis) (symClos lis) == symClos (trClos' (length lis) lis)
+prop_transsym_manual = trClos (symClos lis) == symClos (trClos lis)
 
 exercise8 :: IO()
 exercise8 = do
