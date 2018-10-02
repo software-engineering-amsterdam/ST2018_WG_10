@@ -308,7 +308,7 @@ prop_transsym_manual = trClos (symClos lis) == symClos (trClos lis)
 exercise8 :: IO()
 exercise8 = do
   putStrLn "Test TransSym"
-  quickCheck prop_transsym
+  putStrLn(if prop_transsym_manual then "True" else "False")
   putStrLn "Should be 'Falsifiable' -> Counterexample"
 
 -- Not the same, if we use the example relations used in previous exercises
