@@ -6,18 +6,12 @@ import Data.List
 import System.Random
 import Lecture5
 
--- Exercise 1 --
+-- Exercise 1 (2.5 hours) --
 
 main1 :: IO [()]
 main1 = do 
-           putStrLn ("Example 1:")
-           solveAndShow example1
-           putStrLn ("\nExample 2:")
-           solveAndShow example2
-           putStrLn ("\nExample 3:")
-           solveAndShow example3
-           putStrLn ("\nExample 4:")
-           solveAndShow example4
+           putStrLn ("\nExample 6 (NRC):")
+           solveAndShow2 example6
 
 
 blocks2 :: [[Int]]
@@ -174,7 +168,7 @@ eraseN2 :: Node -> (Row,Column) -> Node
 eraseN2 n (r,c) = (s, constraints2 s) 
   where s = eraseS (fst n) (r,c)
 
-randomS2 = genRandomSudoku2 >>= showNode2
+randomS2 = genRandomNrcSudoku >>= showNode2
 
 showNode2 :: Node -> IO()
 showNode2 = showSudoku2 . fst
@@ -190,17 +184,57 @@ solveNs2 :: [Node] -> [Node]
 solveNs2 = search succNode2 solved 
 
 
--- Exercise 5 --
+-- Exercise 3 (2 hours) --
 
-main2 :: IO ()
-main2 = do r <- genRandomSudoku2
+{- checkUnique checks if every empty cell of a given sudoku
+   has a unique solution and if at least one of them has more
+   than one values that can take then the function returns false
+   else it returns true. 
+
+-}
+
+main3 :: IO ()
+main3 = do 
+           putStrLn ("--------------------------------------------")
+           putStrLn ("|Checking examples with normal sudoku rules|")
+           putStrLn ("--------------------------------------------")
+           if (checkUnique example1) 
+               then putStrLn ("Example 1 has unique solution")
+               else putStrLn ("Example 1 DOES NOT have a unique solution")
+           if (checkUnique example2) 
+               then putStrLn ("Example 2 has unique solution")
+               else putStrLn ("Example 2 DOES NOT have a unique solution")
+           if (checkUnique example3) 
+               then putStrLn ("Example 3 has unique solution")
+               else putStrLn ("Example 3 DOES NOT have a unique solution")
+           if (checkUnique example4) 
+               then putStrLn ("Example 4 has unique solution")
+               else putStrLn ("Example 4 DOES NOT have a unique solution")
+           if (checkUnique example5) 
+               then putStrLn ("Example 5 has unique solution")
+               else putStrLn ("Example 5 DOES NOT have a unique solution")
+           if (checkUnique example6) 
+               then putStrLn ("Example 6 has unique solution")
+               else putStrLn ("Example 6 DOES NOT have a unique solution")
+
+checkUnique :: Grid -> Bool
+checkUnique gr = uniqueSol3 (initNode gr)
+
+uniqueSol3 :: [Node] -> Bool
+uniqueSol3 [] = True
+uniqueSol3 (x:xs) = uniqueSol x && uniqueSol3 xs
+
+-- Exercise 5 (1 hour) --
+
+main5 :: IO ()
+main5 = do r <- genRandomNrcSudoku
            showNode2 r
            s  <- genProblem2 r
            showNode2 s
 
-genRandomSudoku2 :: IO Node
-genRandomSudoku2 = do [r] <- rsolveNs2 [emptyN2]
-                      return r
+genRandomNrcSudoku :: IO Node
+genRandomNrcSudoku = do [r] <- rsolveNs2 [emptyN2]
+                        return r
 
 rsolveNs2 :: [Node] -> IO [Node]
 rsolveNs2 ns = rsearch rsuccNode2 solved (return ns)
@@ -228,14 +262,5 @@ uniqueSol2 node = singleton (solveNs2 [node]) where
   singleton [] = False
   singleton [x] = True
   singleton (x:y:zs) = False
-
-
-
-
-
-
-
-
-
 
 
