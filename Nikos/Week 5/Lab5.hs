@@ -25,30 +25,30 @@ showSudoku2 = showGrid2 . sud2grid
 
 showGrid2 :: Grid -> IO()
 showGrid2 [as,bs,cs,ds,es,fs,gs,hs,is] =
- do putStrLn ("+----------+-----------+----------+")
+ do putStrLn (" +---------+-----------+----------+")
     showRow1 as
-    putStrLn ("|   +------|---+   +----------+   |")
+    putStrLn (" |  +------|---+   +----------+   |")
     showRow2 bs
-    putStrLn ("|   |      |   |   |   |      |   |")
+    putStrLn (" |  |      |   |   |   |      |   |")
     showRow2 cs
-    putStrLn ("+---|------+---|---|---+------|---+")
+    putStrLn (" +--|------+---|---|---+------|---+")
     showRow2 ds
-    putStrLn ("|   +----------+   +----------+   |")
+    putStrLn (" |  +----------+   +----------+   |")
     showRow1 es
-    putStrLn ("|   +----------+   +----------+   |")
+    putStrLn (" |  +----------+   +----------+   |")
     showRow2 fs
-    putStrLn ("+---|------|---|---|---|------|---|")
+    putStrLn (" +--|------|---|---|---|------|---|")
     showRow2 gs
-    putStrLn ("|   |      |   |   |   |      |   |")
+    putStrLn (" |  |      |   |   |   |      |   |")
     showRow2 hs
-    putStrLn ("|   +----------+   +----------+   |")
+    putStrLn (" |  +----------+   +----------+   |")
     showRow1 is
-    putStrLn ("+----------+-----------+----------+")
+    putStrLn (" +---------+-----------+----------+")
 
 showRow1 :: [Value] -> IO()
 showRow1 [a1,a2,a3,a4,a5,a6,a7,a8,a9] = 
- do  putChar '|'
-     putStr (showVal a1) ; putStr "    "
+ do  putStr " |"
+     putStr (showVal a1) ; putStr "   "
      putStr (showVal a2) ; putStr "  "
      putStr (showVal a3) ; putStr " | "
      putStr (showVal a4) ; putStr "   "
@@ -62,8 +62,8 @@ showRow1 [a1,a2,a3,a4,a5,a6,a7,a8,a9] =
 
 showRow2 :: [Value] -> IO()
 showRow2 [a1,a2,a3,a4,a5,a6,a7,a8,a9] = 
- do  putChar '|'
-     putStr (showVal a1) ; putStr "  | "
+ do  putStr " |"
+     putStr (showVal a1) ; putStr " | "
      putStr (showVal a2) ; putStr "  "
      putStr (showVal a3) ; putStr " | "
      putStr (showVal a4) ; putStr " | "
@@ -193,38 +193,81 @@ solveNs2 = search succNode2 solved
 
 -}
 
+
 main3 :: IO ()
 main3 = do 
            putStrLn ("--------------------------------------------")
            putStrLn ("|Checking examples with normal sudoku rules|")
            putStrLn ("--------------------------------------------")
-           if (checkUnique example1) 
-               then putStrLn ("Example 1 has unique solution")
-               else putStrLn ("Example 1 DOES NOT have a unique solution")
-           if (checkUnique example2) 
-               then putStrLn ("Example 2 has unique solution")
-               else putStrLn ("Example 2 DOES NOT have a unique solution")
-           if (checkUnique example3) 
-               then putStrLn ("Example 3 has unique solution")
-               else putStrLn ("Example 3 DOES NOT have a unique solution")
-           if (checkUnique example4) 
-               then putStrLn ("Example 4 has unique solution")
-               else putStrLn ("Example 4 DOES NOT have a unique solution")
-           if (checkUnique example5) 
-               then putStrLn ("Example 5 has unique solution")
-               else putStrLn ("Example 5 DOES NOT have a unique solution")
-           if (checkUnique example6) 
-               then putStrLn ("Example 6 has unique solution")
-               else putStrLn ("Example 6 DOES NOT have a unique solution")
+           if ((checkUnique example1) && (isMinimal example1)) 
+               then putStrLn ("Example 1 is minimal")
+               else do 
+                      putStrLn ("Example 1 is NOT minimal.")
+                      if (checkUnique example1)
+                      then do putStrLn ("One minimalized version would be:")
+                              showMinimalized example1
+                      else pure()
+           if ((checkUnique example2) && (isMinimal example2)) 
+               then putStrLn ("Example 2 is minimal")
+               else do 
+                      putStrLn ("Example 2 is NOT minimal.")
+                      if (checkUnique example2)
+                      then do putStrLn ("One minimalized version would be:")
+                              showMinimalized example2
+                      else pure()
+           if ((checkUnique example3) && (isMinimal example3)) 
+               then putStrLn ("Example 3 is minimal")
+               else do 
+                      putStrLn ("Example 3 is NOT minimal.")
+                      if (checkUnique example3)
+                      then do putStrLn ("One minimalized version would be:")
+                              showMinimalized example3
+                      else pure()
+           if ((checkUnique example5) && (isMinimal example5)) 
+               then putStrLn ("Example 5 is minimal")
+               else do 
+                      putStrLn ("Example 5 is NOT minimal.")
+                      if (checkUnique example5)
+                      then do putStrLn ("One minimalized version would be:")
+                              showMinimalized example5
+                      else pure()
+           if ((checkUnique example6) && (isMinimal example6)) 
+               then putStrLn ("Example 6 is minimal")
+               else do 
+                      putStrLn ("Example 6 is NOT minimal.")
+                      if (checkUnique example6)
+                      then do putStrLn ("One minimalized version would be:")
+                              showMinimalized example6
+                      else pure()
+
 
 checkUnique :: Grid -> Bool
-checkUnique gr = uniqueSol3 (initNode gr)
+checkUnique gr = hasUniqueSol (initNode gr)
 
-uniqueSol3 :: [Node] -> Bool
-uniqueSol3 [] = True
-uniqueSol3 (x:xs) = uniqueSol x && uniqueSol3 xs
+hasUniqueSol :: [Node] -> Bool
+hasUniqueSol [] = True
+hasUniqueSol (x:xs) = uniqueSol x && hasUniqueSol xs
 
--- Exercise 5 (1 hour) --
+gridToNode :: Grid -> Node
+gridToNode gr = r
+         where [r] = initNode gr
+
+showMinimalized :: Grid -> IO ()
+showMinimalized x = showNode (minimalize mn (filledPositions (fst mn)))
+                  where mn = gridToNode x 
+
+isMinimal :: Grid -> Bool
+isMinimal x = (checkUnique x) && compareSudoku mn (minimalize mn (filledPositions (fst mn)))
+                where mn = gridToNode x 
+
+compareSudoku :: Node -> Node -> Bool
+compareSudoku x y = filledPositions (fst x) == filledPositions (fst y)
+
+showExample :: Grid -> IO ()
+showExample x = showNode $ gridToNode x
+
+
+-- Exercise 5 (1,5 hour) --
 
 main5 :: IO ()
 main5 = do r <- genRandomNrcSudoku
