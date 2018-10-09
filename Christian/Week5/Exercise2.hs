@@ -1,12 +1,63 @@
 
-module Lecture5
+module Exercise2
 
 where
 
+import qualified Lecture5 as L5
 import Data.List
 import System.Random
 import Debug.Trace
-import System.IO.Unsafe
+import Data.Time.Clock
+import qualified Data.Map as Map
+
+{- 
+This module contains the refactored code for Exercise 2. 
+
+The following changes were made:
+    
+1. freeAtPos was replaced by freeAtPos', as suggested in the assignment. 
+
+2. The Node type was changed to:
+  
+   > type Node = (Sudoku, Constrnt, [Constraint])
+
+   This allows for easy extensibility, the same code can run both NRC and 
+   normal sudokus, simply by passing a different constraint set to the solver.
+   The functions succNode and initNode have been adapted accordingly. 
+
+3. prune has been modified to:
+  
+   > prune :: Constrnt -> (Row, Col, Value) -> [Constraint] -> [Constraint]
+
+   Just like the original implementation, prune applies the constraints to the
+   Constraint values, eliminating values that, together with the given value, 
+   would violate the constraint. 
+
+
+Extending the solver with NRC constraints is easy in the refactored code:
+
+    solveAndShowWithConstrnt :: Constrnt -> Grid -> IO [()]
+
+This function can take any Constrnt, without any modification to the code. 
+
+
+Performance testing was implemented in perfTest :: IO ().
+The tests are done using the old solver L5.solveAndShow, and the
+refactored solver solveAndShow, which is measured using the Data.Time.Clock module.
+
+The refactored solver is about 2 times slower:
+ 
+>>> perfTest
+> (...)
+> Original: 1.6119573s
+> Refactored: 3.9775735s
+
+
+-}
+
+
+
+
 
 type Row    = Int
 type Column = Int
@@ -88,7 +139,9 @@ freeAtPos' :: Sudoku -> Position -> Constrnt -> [Value]
 freeAtPos' s (r,c) xs = let
         ys = filter (elem (r,c)) xs
     in
-        if ys == [] then values else
+        if ys == [] then 
+            values 
+        else
             foldl1 intersect (map ((values \\) . map s) ys)
 
 
@@ -102,7 +155,7 @@ consistent :: Sudoku -> Bool
 consistent s = constrntInjective constrnts s
 
 extend :: Sudoku -> ((Row,Column),Value) -> Sudoku
-extend = update
+extend s v = update s v
 
 update :: Eq a => (a -> b) -> (a,b) -> a -> b
 update f (y,z) x = if x == y then z else f x
@@ -129,13 +182,16 @@ prune :: Constrnt -> (Row,Column,Value)
       -> [Constraint] -> [Constraint]
 prune _ _ [] = []
 prune cst (r,c,v) ((x,y,zs):rest) = let
-        cst' = filter (elem (r, c)) cst
+        cst' = (constraintsOf cst) (r, c)
     in
         if any (elem (x, y)) cst' then
             (x, y, zs \\ [v]) : prune cst (r, c, v) rest
         else
             (x, y, zs) : prune cst (r, c, v) rest
 
+-- The constraints that apply to a certain cell
+constraintsOf :: Constrnt -> Position -> Constrnt
+constraintsOf cst (x, y) = filter (elem (x, y)) cst
 
 initNode :: Constrnt -> Grid -> [Node]
 initNode cst gr = let s = grid2sud gr in
@@ -247,9 +303,20 @@ example5 = [[1,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,8,0],
             [0,0,0,0,0,0,0,0,9]]
 
+-- source: 
+-- https://www.telegraph.co.uk/news/science/science-news/9359579/Worlds-hardest-sudoku-can-you-crack-it.html
 example6 :: Grid
-example6 = replicate 9 (replicate 9 0 )
+example6 = [[8,0,0,0,0,0,0,0,0],
+            [0,0,3,6,0,0,0,0,0],
+            [0,7,0,0,9,0,2,0,0],
+            [0,5,0,0,0,7,0,0,0],
+            [0,0,0,0,4,5,7,0,0],
+            [0,0,0,1,0,0,0,3,0],
+            [0,0,1,0,0,0,0,6,8],
+            [0,0,8,5,0,0,0,1,0],
+            [0,9,0,0,0,0,4,0,0]]
 
+main :: IO ()
 main = do
     putStrLn "Example 3:"
     solveAndShow example3
@@ -258,100 +325,25 @@ main = do
     showSudoku s
     putStr "NRC Consistent: "
     putStrLn $ show $ constrntInjective cst s
+    perfTest
 
-{-
-emptyN :: Node
-emptyN = (\ _ -> 0,constraints (\ _ -> 0) constrnts)
 
-getRandomInt :: Int -> IO Int
-getRandomInt n = getStdRandom (randomR (0,n))
+doTestCase :: (Grid -> IO a) ->  IO ()
+doTestCase f = do
+    sequence $ map (\(i, g) -> putStrLn (show i)  >> f g) $ zip [1..] testcases
+    return ()
+        where testcases = [example1, example2, example3, example6]
 
-getRandomItem :: [a] -> IO [a]
-getRandomItem [] = return []
-getRandomItem xs = do n <- getRandomInt maxi
-                      return [xs !! n]
-                   where maxi = length xs - 1
+perfTest :: IO ()
+perfTest = do
+    t0 <- getCurrentTime
+    -- the original
+    doTestCase L5.solveAndShow
+    t1 <- getCurrentTime
+    -- the refactored
+    doTestCase solveAndShow    
+    t2 <- getCurrentTime
+    putStrLn $ "Original: " ++ show (diffUTCTime t1 t0)
+    putStrLn $ "Refactored: " ++ show (diffUTCTime t2 t1)
 
-randomize :: Eq a => [a] -> IO [a]
-randomize xs = do y <- getRandomItem xs
-                  if null y
-                    then return []
-                    else do ys <- randomize (xs\\y)
-                            return (head y:ys)
 
-sameLen :: Constraint -> Constraint -> Bool
-sameLen (_,_,xs) (_,_,ys) = length xs == length ys
-
-getRandomCnstr :: [Constraint] -> IO [Constraint]
-getRandomCnstr cs = getRandomItem (f cs)
-  where f [] = []
-        f (x:xs) = takeWhile (sameLen x) (x:xs)
-
-rsuccNode :: Node -> IO [Node]
-rsuccNode (s,cs) = do xs <- getRandomCnstr cs
-                      if null xs
-                        then return []
-                        else return
-                          (extendNode (s,cs\\xs) (head xs))
-
-rsolveNs :: [Node] -> IO [Node]
-rsolveNs ns = rsearch rsuccNode solved (return ns)
-
-rsearch :: (node -> IO [node])
-            -> (node -> Bool) -> IO [node] -> IO [node]
-rsearch succ goal ionodes =
-  do xs <- ionodes
-     if null xs
-       then return []
-       else
-         if goal (head xs)
-           then return [head xs]
-           else do ys <- rsearch succ goal (succ (head xs))
-                   if (not . null) ys
-                      then return [head ys]
-                      else if null (tail xs) then return []
-                           else
-                             rsearch
-                               succ goal (return $ tail xs)
-
-genRandomSudoku :: IO Node
-genRandomSudoku = do [r] <- rsolveNs [emptyN]
-                     return r
-
-randomS = genRandomSudoku >>= showNode
-
-uniqueSol :: Node -> Bool
-uniqueSol node = singleton (solveNs [node]) where
-  singleton [] = False
-  singleton [x] = True
-  singleton (x:y:zs) = False
-
-eraseS :: Sudoku -> (Row,Column) -> Sudoku
-eraseS s (r,c) (x,y) | (r,c) == (x,y) = 0
-                     | otherwise      = s (x,y)
-
-eraseN :: Node -> (Row,Column) -> Node
-eraseN n (r,c) = (s, constraints s constrnts)
-  where s = eraseS (fst n) (r,c)
-
-minimalize :: Node -> [(Row,Column)] -> Node
-minimalize n [] = n
-minimalize n ((r,c):rcs) | uniqueSol n' = minimalize n' rcs
-                         | otherwise    = minimalize n  rcs
-  where n' = eraseN n (r,c)
-
-filledPositions :: Sudoku -> [(Row,Column)]
-filledPositions s = [ (r,c) | r <- positions,
-                              c <- positions, s (r,c) /= 0 ]
-
-genProblem :: Node -> IO Node
-genProblem n = do ys <- randomize xs
-                  return (minimalize n ys)
-   where xs = filledPositions (fst n)
-
-main :: IO ()
-main = do [r] <- rsolveNs [emptyN]
-          showNode r
-          s  <- genProblem r
-          showNode s
--}
