@@ -4,7 +4,10 @@ import Data.List
 import System.Random
 import Lecture5
 
---Exercise 1 | Time spent (5h.)
+import qualified Exercise2
+
+-- Exercise 1 | Time spent (5h.)
+-- ==========
 
 --Defined the NRC blocks for extra constraints
 nrc_blocks :: [[Int]]
@@ -163,9 +166,43 @@ example5 = [[1,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,8,0],
             [0,0,0,0,0,0,0,0,9]]
 
+-- Exercise 2 | Time Spent (4 hours)
+-- ==========
+
+{- See Exercise2.hs -}
+
+exercise2 :: IO ()
+exercise2 = Exercise2.main
 
 
---Exercise 4 | Time Spent (4 hours)
+-- Exercise 3 | Time spent: 3 hours
+-- ========== 
+
+-- Adapted main so the generated node is returned
+genNode :: IO Node
+genNode = do 
+    [r] <- rsolveNs [emptyN]
+    showNode r
+    s <- genProblem r
+    showNode s
+    return $ s
+
+
+-- Generates a list with one position erased. For each filled position, try to
+-- erase it, and test if the result is not unique. If any result is unique, the
+-- node is not minimal. 
+prop_Minimal :: Node -> Bool
+prop_Minimal s = all (not.uniqueSol) [eraseN s p | p <- filledPositions $ fst s]
+    
+-- The generation is pretty slow, so a small sample size is used.
+exercise3 = do
+    nodes <- sequence $ replicate 5 genNode
+    let allMin = all prop_Minimal nodes 
+    putStrLn $ "All are minimal: " ++ show allMin
+
+
+-- Exercise 4 | Time Spent (4 hours)
+-- ==========
 
 {-
 sub blocks numbered from 1-9
