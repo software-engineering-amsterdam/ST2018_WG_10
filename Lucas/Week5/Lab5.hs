@@ -96,6 +96,16 @@ nrc_prune (r,c,v) ((x,y,zs):rest)
         (x,y,zs\\[v]) : nrc_prune (r,c,v) rest
   | otherwise = (x,y,zs) : nrc_prune (r,c,v) rest
 
+
+exercise1 :: IO()
+exercise1 = do
+              putStrLn "NRC Example from Lab"
+              showSudoku $ grid2sud example1
+              putStrLn "SOLVED"
+              nrc_solveAndShow example1
+              putStrLn "Only one solution found, thus it works :)"
+
+
 --Example from the lab
 example1 :: Grid
 example1 = [[0,0,0,3,0,0,0,0,0],
@@ -108,6 +118,7 @@ example1 = [[0,0,0,3,0,0,0,0,0],
             [0,8,0,0,4,0,0,0,0],
             [0,0,2,0,0,0,0,0,0]]
 
+--Other random testing examples
 example2 :: Grid
 example2 = [[0,0,0,0,0,0,0,8,0],
             [0,0,0,5,0,0,0,0,0],
@@ -257,20 +268,7 @@ comp_test g = do
     putStrLn "Refactored"
     solveAndShow' g
 
---Exercise 3 | Time Spent ()
-
---Used to get all combinations of sub-blocks 
-combinations :: Int -> [a] -> [[a]]
-combinations 0 _  = [ [] ]
-combinations n xs = [ y:ys | y:xs' <- tails xs
-                           , ys <- combinations (n-1) xs']
-
-
-choose n list = concatMap permutations $ choose' list [] where
-  choose' []     r = if length r == n then [r] else []
-  choose' (x:xs) r | length r == n = [r]
-                   | otherwise     = choose' xs (x:r) 
-                                  ++ choose' xs r
+--Exercise 4 | Time Spent (4 hours)
 
 {-
 sub blocks numbered from 1-9
@@ -282,55 +280,60 @@ sub blocks numbered from 1-9
   |7|8|9|
   -------
 
+  Results:
 
-  Pseudocode:
-
-  --Obtain complete sudoku
-  --Get random combinations of sub blocks to leave empty
-  --randomize that list
-  --Go through the list leaving sub blocks
-  --Take away elements one by one, check if the sudoku is 
-  --
+  It is definetely possible to generate a sudoku with 3 and 4 empty blocks.
+  All that needs to be done is to try all combination of blocks, erase them and check whether the solution is unique.
+  If it is unique we have found a solution, otherwise try a different combination. 
+  If an empty list is returned it means no possible solution has been found. This has been the case for me with 5 empty blocks,
+  there might be some possible solutions but my brute force method did not find any.
+  As for 4 empty blocks, that seems to be no problem. It generates a solution most of the time, this means that there are some arrangements of sudokus that do not neccesarily have the 4 empty block option
+  5 Empty Blocks has not returned a viable solution, this leads me to believe that it is not possible to have this.
 -}
 
 
-eraseS' :: Sudoku -> (Row,Column) -> Sudoku
-eraseS' s (r,c) (x,y) | (r,c) == (x,y) = 0
-                     | otherwise      = s (x,y)
+--Used to get all combinations of sub-blocks 
+combinations :: Int -> [a] -> [[a]]
+combinations 0 _  = [ [] ]
+combinations n xs = [ y:ys | y:xs' <- tails xs
+                           , ys <- combinations (n-1) xs']
 
-eraseN' :: Node -> (Row,Column) -> Node
-eraseN' n (r,c) = (s, constraints s) 
-  where s = eraseS' (fst n) (r,c) 
+genBlockProblem :: Node -> Int -> IO Node
+genBlockProblem n i = do 
+                        bc <- randomize (genSubBlockCombos i)
+                        let hd = head bc
+                        let tl = tail bc
+                        let xs = concat(map getSubBlockPositions (hd))
+                        let nod = minimalize n xs
+                        if all (==True) (map (isSubBlockEmpty (fst nod)) hd)
+                          then return nod
+                          else return (runPossibilities n hd tl)
 
-minimalize' :: Node -> [(Row,Column)] -> [Int]-> Node
-minimalize' n [] sb= n
-minimalize' n ((r,c):rcs) sb | all (==0) (map isSubBlockEmpty sb) = minimalize' n' rcs
-                             | otherwise    = minimalize' n  rcs
-  where n' = eraseN' n (r,c)
+runPossibilities :: Node -> [Int] -> [[Int]] -> Node
+runPossibilities n h t = do
+                         let hd = head t
+                         let tl = tail t
+                         let xs = concat(map getSubBlockPositions (hd))
+                         let nod = minimalize n xs
+                         if all (==True) (map (isSubBlockEmpty (fst nod)) hd)
+                           then nod
+                           else runPossibilities n hd tl
 
-filledPositions' :: Sudoku -> [(Row,Column)]
-filledPositions' s = [ (r,c) | r <- positions,  
-                              c <- positions, s (r,c) /= 0 ]
-
---Returns all the filled blocks
 filledBlocks :: Sudoku -> [(Row,Column)]
-filledBlocks s = concat $ map getSubBlockPositions (head $ genSubBlockCombos 3)
-
-genProblem' :: Node -> IO Node
-genProblem' n = do
-                  ys <- randomize xs
-                  return (minimalize' n ys (head $ genSubBlockCombos 3))
-                where xs = filledBlocks (fst n) --Make this to contain the subblocks as FilledPositions 
-
---sb <- randomize $ genSubBlockCombos 3
---sb' <- map getSubBlockPositions (head sb)
-
-blocksToEmpty :: Sudoku -> [(Row,Column)]
-blocksToEmpty s = [ (r,c) | r <- positions,  
+filledBlocks s = [ (r,c) | r <- positions,  
                               c <- positions, s (r,c) /= 0 ]
 
 genSubBlockCombos :: Int -> [[Int]]
 genSubBlockCombos n = combinations n [1..9]
+
+eraseBlock :: Sudoku -> [(Row,Column)] -> Sudoku
+eraseBlock s l = if (length l == 0) then s
+                    else
+                      do
+                        let h = head l
+                        let t = tail l
+                        let z = eraseS s h
+                        eraseBlock z t
 
 isSubBlockEmpty :: Sudoku -> Int -> Bool
 isSubBlockEmpty s n = all (==0) (map s (getSubBlockPositions n))
@@ -345,3 +348,21 @@ getSubBlockPositions 6 = [(4,7),(4,8),(4,9),(5,7),(5,8),(5,9),(6,7),(6,8),(6,9)]
 getSubBlockPositions 7 = [(7,1),(7,2),(7,3),(8,1),(8,2),(8,3),(9,1),(9,2),(9,3)]
 getSubBlockPositions 8 = [(7,4),(7,5),(7,6),(8,4),(8,5),(8,6),(9,4),(9,5),(9,6)]
 getSubBlockPositions 9 = [(7,7),(7,8),(7,9),(8,7),(8,8),(8,9),(9,7),(9,8),(9,9)]
+
+
+exercise4 :: IO ()
+exercise4 = do r <- genRandomSudoku
+               putStrLn "Random Sudoku, everytime this is run it is different"
+               putStrLn "You might have to try a few times to get a problem for 4 Empty Blocks"
+               putStrLn "Empty List just means no problem was found for this particular sudoku"
+               putStrLn "5 Empty blocks has never returned a problem for me"
+               showNode r
+               s  <- genBlockProblem r 3
+               putStrLn "3 Empty Blocks Problem"
+               showNode s
+               s  <- genBlockProblem r 4
+               putStrLn "4 Empty Blocks Problem"
+               showNode s
+               s  <- genBlockProblem r 5
+               putStrLn "5 Empty Blocks Problem"
+               showNode s
