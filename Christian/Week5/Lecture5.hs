@@ -348,9 +348,28 @@ genProblem n = do ys <- randomize xs
                   return (minimalize n ys)
    where xs = filledPositions (fst n)
 
-main :: IO ()
-main = do [r] <- rsolveNs [emptyN]
-          showNode r
-          s  <- genProblem r
-          showNode s
 
+-- Exercise 3. --
+-- =========== --
+
+-- Adapted main so the generated node is returned
+genNode :: IO Node
+genNode = do 
+    [r] <- rsolveNs [emptyN]
+    showNode r
+    s <- genProblem r
+    showNode s
+    return $ s
+
+
+-- Generates a list with one position erased. For each filled position, try to
+-- erase it, and test if the result is not unique. If any result is unique, the
+-- node is not minimal. 
+prop_Minimal :: Node -> Bool
+prop_Minimal s = all (not.uniqueSol) [eraseN s p | p <- filledPositions $ fst s]
+    
+-- The generation is pretty slow, so a small sample size is used.
+main3 = do
+    nodes <- sequence $ replicate 5 genNode
+    let allMin = all prop_Minimal nodes 
+    putStrLn $ "All are minimal: " ++ show allMin
