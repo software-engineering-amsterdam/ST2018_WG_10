@@ -18,6 +18,7 @@ values    = [1..9]
 blocks :: [[Int]]
 blocks = [[1..3],[4..6],[7..9]]
 
+
 showVal :: Value -> String
 showVal 0 = " "
 showVal d = show d
@@ -64,7 +65,7 @@ showSudoku :: Sudoku -> IO()
 showSudoku = showGrid . sud2grid
 
 bl :: Int -> [Int]
-bl x = concat $ filter (elem x) blocks
+bl x = concat $ filter (elem x) blocks 
 
 subGrid :: Sudoku -> (Row,Column) -> [Value]
 subGrid s (r,c) = 
@@ -88,8 +89,7 @@ freeAtPos :: Sudoku -> (Row,Column) -> [Value]
 freeAtPos s (r,c) = 
   (freeInRow s r) 
    `intersect` (freeInColumn s c) 
-   `intersect` (freeInSubgrid s (r,c))
-
+   `intersect` (freeInSubgrid s (r,c)) 
 
 injective :: Eq a => [a] -> Bool
 injective xs = nub xs == xs
@@ -122,7 +122,6 @@ update :: Eq a => (a -> b) -> (a,b) -> a -> b
 update f (y,z) x = if x == y then z else f x 
 
 type Constraint = (Row,Column,[Value])
---Add constraints to define the injectivity of the other boxes
 
 type Node = (Sudoku,[Constraint])
 
@@ -164,7 +163,6 @@ openPositions s = [ (r,c) | r <- positions,
 length3rd :: (a,b,[c]) -> (a,b,[c]) -> Ordering
 length3rd (_,_,zs) (_,_,zs') = compare (length zs) (length zs')
 
---Contstraints, the cell with the least possible values is sorted first
 constraints :: Sudoku -> [Constraint] 
 constraints s = sortBy length3rd 
     [(r,c, freeAtPos s (r,c)) | 
@@ -206,8 +204,8 @@ solveAndShow gr = solveShowNs (initNode gr)
 solveShowNs :: [Node] -> IO[()]
 solveShowNs = sequence . fmap showNode . solveNs
 
-exampleV :: Grid
-exampleV = [[5,3,0,0,7,0,0,0,0],
+example1 :: Grid
+example1 = [[5,3,0,0,7,0,0,0,0],
             [6,0,0,1,9,5,0,0,0],
             [0,9,8,0,0,0,0,6,0],
             [8,0,0,0,6,0,0,0,3],
@@ -217,8 +215,8 @@ exampleV = [[5,3,0,0,7,0,0,0,0],
             [0,0,0,4,1,9,0,0,5],
             [0,0,0,0,8,0,0,7,9]]
 
-exampleW :: Grid
-exampleW = [[0,3,0,0,7,0,0,0,0],
+example2 :: Grid
+example2 = [[0,3,0,0,7,0,0,0,0],
             [6,0,0,1,9,5,0,0,0],
             [0,9,8,0,0,0,0,6,0],
             [8,0,0,0,6,0,0,0,3],
@@ -228,8 +226,8 @@ exampleW = [[0,3,0,0,7,0,0,0,0],
             [0,0,0,4,1,9,0,0,5],
             [0,0,0,0,8,0,0,7,9]]
 
-exampleX :: Grid
-exampleX = [[1,0,0,0,3,0,5,0,4],
+example3 :: Grid
+example3 = [[1,0,0,0,3,0,5,0,4],
             [0,0,0,0,0,0,0,0,3],
             [0,0,2,0,0,5,0,9,8], 
             [0,0,9,0,0,0,0,3,0],
@@ -239,8 +237,8 @@ exampleX = [[1,0,0,0,3,0,5,0,4],
             [0,0,0,3,0,0,0,0,0],
             [0,4,0,0,0,9,7,0,0]]
 
-exampleY :: Grid
-exampleY = [[1,2,3,4,5,6,7,8,9],
+example4 :: Grid
+example4 = [[1,2,3,4,5,6,7,8,9],
             [2,0,0,0,0,0,0,0,0],
             [3,0,0,0,0,0,0,0,0],
             [4,0,0,0,0,0,0,0,0],
@@ -250,8 +248,8 @@ exampleY = [[1,2,3,4,5,6,7,8,9],
             [8,0,0,0,0,0,0,0,0],
             [9,0,0,0,0,0,0,0,0]]
 
-exampleZ :: Grid
-exampleZ = [[1,0,0,0,0,0,0,0,0],
+example5 :: Grid
+example5 = [[1,0,0,0,0,0,0,0,0],
             [0,2,0,0,0,0,0,0,0],
             [0,0,3,0,0,0,0,0,0],
             [0,0,0,4,0,0,0,0,0],
@@ -260,6 +258,38 @@ exampleZ = [[1,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,7,0,0],
             [0,0,0,0,0,0,0,8,0],
             [0,0,0,0,0,0,0,0,9]]
+
+example6 :: Grid
+example6 = [[0,0,0,3,0,0,0,0,0],
+            [0,0,0,7,0,0,3,0,0],
+            [2,0,0,0,0,0,0,0,8],
+            [0,0,6,0,0,5,0,0,0],
+            [0,9,1,6,0,0,0,0,0],
+            [3,0,0,0,7,1,2,0,0],
+            [0,0,0,0,0,0,0,3,1],
+            [0,8,0,0,4,0,0,0,0],
+            [0,0,2,0,0,0,0,0,0]]
+
+{- 
+	     +---------+---------+---------+
+             |         | 3       |         |
+             |   +-----|--+   +--|-----+   |
+             |   |     | 7|   |  | 3   |   |
+             | 2 |     |  |   |  |     | 8 |
+             +---------+---------+---------+
+             |   |   6 |  |   |5 |     |   |
+             |   +-----|--+   +--|-----+   |
+             |    9  1 | 6       |         |
+             |   +-----|--+   +--|-----+   |
+             | 3 |     |  | 7 |1 | 2   |   |
+             +---------+---------+---------+
+             |   |     |  |   |  |    3| 1 |
+             |   |8    |  | 4 |  |     |   |
+             |   +-----|--+   +--|-----+   |
+             |       2 |         |         |
+             +---------+---------+---------+
+
+-}
 
 emptyN :: Node
 emptyN = (\ _ -> 0,constraints (\ _ -> 0))
@@ -351,7 +381,7 @@ genProblem n = do ys <- randomize xs
    where xs = filledPositions (fst n)
 
 main :: IO ()
-main = do r <- genRandomSudoku
+main = do [r] <- rsolveNs [emptyN]
           showNode r
           s  <- genProblem r
           showNode s
