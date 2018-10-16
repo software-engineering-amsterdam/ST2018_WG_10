@@ -29,6 +29,8 @@ exM x y m =
         sq = sqrM (exM x (quot y 2) m) m
      in multM oddf sq m
 
+exercise1 = do
+    putStrLn $ "exM (5^128) (10^30) (26^50) = " ++ show (exM (5^128) (10^30) (26^50))
 
 -- 2)
 
@@ -56,6 +58,12 @@ testExM exf = do
 test_exM = testExM exM
 test_expM = testExM expM
 
+exercise2 = do
+    putStr "exM (repeated squaring): "
+    testExM exM
+    putStr "expM (naive): "
+    testExM expM
+
 {-
   Result:
 
@@ -77,6 +85,8 @@ test_expM = testExM expM
 composites :: [Integer]
 composites = [x | x <- [2..], not . prime $ x]
 
+exercise3 = do
+    putStrLn $ show $ take 100 composites
 
 -- 4)
 
@@ -100,14 +110,16 @@ foolPrime k = test' k 0
             then return c
             else test' k (n + 1)
 
-testOneToThree :: IO [()]
-testOneToThree =
-    sequence $
-    map (\x -> do
-             prime <- foolPrime x
-             putStrLn $ show prime)
-        [1 .. 3]
-
+exercise4 = do
+    putStrLn "Fermat liar (k = 1):"
+    p <- foolPrime 1
+    putStrLn $ show p
+    putStrLn "Fermat liar (k = 2):"
+    p <- foolPrime 2
+    putStrLn $ show p
+    putStrLn "Fermat liar (k = 3):"
+    p <- foolPrime 3
+    putStrLn $ show p
 
 -- 5)
 
@@ -128,6 +140,17 @@ foolPrime' k = test k 0
         if fooled
             then return c
             else test k (n + 1)
+
+exercise5 = do
+    putStrLn "Carmichael fermat liar (k = 1):"
+    p <- foolPrime' 1
+    putStrLn $ show p
+    putStrLn "Carmichael fermat liar (k = 2):"
+    p <- foolPrime' 2
+    putStrLn $ show p
+    putStrLn "Carmichael fermat liar (k = 3):"
+    p <- foolPrime' 3
+    putStrLn $ show p
 
 {-
  It can be observed that with a random coprime of any Carmichael number,
@@ -163,6 +186,15 @@ foolMrPrime k = test k 0
         if fooled
             then return c
             else test k (n + 1)
+
+exercise6 = do
+    putStrLn "Miller Rabin liar (k = 2):"
+    p <- foolMrPrime 2
+    putStrLn $ show p
+    putStrLn "Miller Rabin liar (k = 3):"
+    p <- foolMrPrime 3
+    putStrLn $ show p
+
 
 {-
   `primeMR` isn't easily fooled. Much larger carmichael numbers are found e.g.:
@@ -203,6 +235,21 @@ largeMersennePrimes n = do
 -- Test if prime `potentialLargeMersennePrime` are all Mersenne primes as well
 test_filteredPotentialLargeMersennePrimes :: Int -> Bool
 test_filteredPotentialLargeMersennePrimes n = filter prime (potentialLargeMersennePrime n) == actualLargeMersennePrime n
+
+-- Show for the first n primes the mersenne candidates 2^p - 1 that
+-- test positive for the Miller-Rabin primality test,
+-- and validate them against all known mersenne primes in mers.
+showLargeMrMersennePrimes :: Int -> IO ()
+showLargeMrMersennePrimes n = do
+    primes <- filter (\(_, b, _) -> b) <$> largeMersennePrimes n
+    sequence $ map (putStrLn . showPrime) primes
+    return ()
+    where
+        showPrime (nr, True, True ) = " Is Mersenne Prime: " ++ show nr
+        showPrime (nr, True, False) = "Not Mersenne Prime: " ++ show nr
+        showPrime (_ , False, _) = error "This shouldn't happen."
+
+exercise7 = showLargeMrMersennePrimes 250
 
 {-
   It can be shown that not every potential Mersenne prime calculated with
