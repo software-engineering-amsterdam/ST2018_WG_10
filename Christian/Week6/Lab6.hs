@@ -10,7 +10,6 @@ import Lecture6 hiding
     , primeTestF
     , primeTestsF
     )
-import System.IO.Unsafe
 import System.Random
 import System.Timeout
 import Test.QuickCheck
@@ -47,7 +46,7 @@ randomBigIntSeq :: [IO Integer]
 randomBigIntSeq = map (\n -> randomRIO (10 ^ n, 10 ^ (n + 1))) [1 ..]
 
 -- find the maximum exponent n = 2^k for which exf x (2^n) is reasonably
--- fast, and report it back. 
+-- fast, and report it back.
 testExM :: (Integer -> Integer -> Integer -> Integer) -> IO ()
 testExM exf = do
     test <- testExM' exf 1
@@ -60,7 +59,7 @@ testExM exf = do
             then testExM' exf (n * 2)
             else return n
 
--- Result: 
+-- Result:
 --   >>> testExM exM
 --   > Test result: 8192
 --
@@ -124,8 +123,13 @@ foolPrime' k = test k 0
             then return c
             else test k (n + 1)
 
+-- carmichael numbers easily fool the fermat test:
+--
+
 -- Exercise 6. --
 -- =========== --
+
+{- From Lecture 6 -}
 mrComposite :: Integer -> Integer -> Bool
 mrComposite x n =
     let (r, s) = decomp (n - 1)
@@ -140,6 +144,7 @@ primeMR k n = do
     if exM a (n - 1) n /= 1 || mrComposite a n
         then return False
         else primeMR (k - 1) n
+{- / From lecture 6 -}
 
 foolMrPrime :: Int -> IO Integer
 foolMrPrime k = test k 0
@@ -151,7 +156,12 @@ foolMrPrime k = test k 0
             then return c
             else test k (n + 1)
 
--- primeMR isn't easily fooled.
+-- primeMR isn't easily fooled. Much larger carmichael numbers are found
+-- eg:
+--   >>> foolMrPrime 3
+--   > 3470513474822998969
+--
+-- Larger values of k, eg. 8, result in infeasible computation times.
 
 
 -- Exercise 7. --
