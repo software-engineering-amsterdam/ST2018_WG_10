@@ -115,14 +115,14 @@ test_mrtCarmichael :: Int -> IO [(Integer, Bool)]
 test_mrtCarmichael n = do  -- the `n` represents which of the first n Carmichael numbers should be tested
   let cm = take n carmichaelFirst32
   results <- sequence (map mrt cm)
-  return (zip (map id cm) results)  -- `zip` the results with the input numbers to see which ones yielded which result
+  return (zip cm results)  -- `zip` the results with the input numbers to see which ones yielded which result
 
 -- Test if the implemented Miller-Rabin-Test does produce false positives for known composites
 test_mrtComposite :: Int -> IO [(Integer, Bool)]
 test_mrtComposite n = do
   let comps = take n composites
   results <- sequence (map mrt comps)
-  return (zip (map id comps) results)  -- `zip` the results with the input numbers to see which ones yielded which result
+  return (zip comps results)  -- `zip` the results with the input numbers to see which ones yielded which result
 
 -- Taken from here: https://oeis.org/A001262
 strongPseudoprimesToBase2 :: [Integer]
@@ -132,7 +132,7 @@ test_mrtStrongPseudoprimesToBase2 :: Int -> IO [(Integer, Bool)]
 test_mrtStrongPseudoprimesToBase2 n = do
   let pseudos = take n strongPseudoprimesToBase2
   results <- sequence (map mrt pseudos)
-  return (zip (map id pseudos) results)  -- `zip` the results with the input numbers to see which ones yielded which result
+  return (zip pseudos results)  -- `zip` the results with the input numbers to see which ones yielded which result
 
 {-
   Carmichael numbers are still not detectable as composites, even with the
