@@ -154,3 +154,32 @@ test_mrtStrongPseudoprimesToBase2 n = do
 
 
 -- 7)
+
+-- The actual Mersenne primes based on the `mers` function
+mersennePrimes :: [Integer]
+mersennePrimes = map mers [1..25]  -- the first 25 Mersenne primes are accessible via the `mers` function
+
+-- Potential Mersenne primes based on the first n primes
+potentialLargeMersennePrime :: Int -> [Integer]
+potentialLargeMersennePrime n = map (\p -> 2^p - 1) (take n primes)
+
+-- Test which of the potential Mersenne primes are actual Mersenne primes
+actualLargeMersennePrime :: Int -> [Integer]
+actualLargeMersennePrime n = filter (\p -> elem p mersennePrimes) (potentialLargeMersennePrime n)
+
+-- Test which of the potential Mersenne primes are not actually Mersenne primes
+falseLargeMersennePrime :: Int -> [Integer]
+falseLargeMersennePrime n = filter (\p -> not(elem p mersennePrimes)) (potentialLargeMersennePrime n)
+
+-- Test if prime `potentialLargeMersennePrime` are all Mersenne primes as well
+test_filteredPotentialLargeMersennePrimes :: Int -> Bool
+test_filteredPotentialLargeMersennePrimes n = filter prime (potentialLargeMersennePrime n) == actualLargeMersennePrime n
+
+{-
+  It can be shown that not every potential Mersenne prime calculated with
+  the given formula 2^p-1 is actually one.
+  Many of them like 11 are not even outputting prime numbers in the first place.
+  In fact, it seems that every `potentialLargeMersennePrime` that is actually
+  a prime number is also a valid Mersenne prime. This is partially proven with
+  the function `test_filteredPotentialLargeMersennePrimes`.
+-}
